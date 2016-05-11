@@ -34,8 +34,10 @@ public:
     void getFormat(int* width, int* height, int* numFrames, double* frameRate);
 	bool isFormatValid();
 
-    // reads one frame in YUV444 into target byte array
-    virtual void getOneFrame( QByteArray* targetByteArray, unsigned int frameIdx );
+  // reads one frame in YUV444 into target byte array
+  virtual void getOneFrame( QByteArray* targetByteArray, unsigned int frameIdx );
+  
+  void formatFromFilename(QString name, int &width, int &height, int &frameRate, int &bitDepth, int &subFormat);
 
 	// Return the source file name
 	virtual QString getName();

@@ -17,7 +17,7 @@
 */
 
 #include "yuvfile.h"
-#include "commonFunctions.h"
+//#include "commonFunctions.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QDateTime>
@@ -366,5 +366,100 @@ void YUVFile::getOneFrame(QByteArray* targetByteArray, unsigned int frameIdx )
         // read one frame into cached frame (already in YUV444 format)
         readFrame( targetByteArray, frameIdx, p_width, p_height);
     }
+}
+
+
+
+void YUVFile::formatFromFilename(QString name, int &width, int &height, int &frameRate, int &bitDepth, int &subFormat)
+{
+  // preset return values first
+  width = -1;
+  height = -1;
+  frameRate = -1;
+  bitDepth = -1;
+  subFormat = -1;
+  
+  if (name.isEmpty())
+    return;
+  
+  // parse filename and extract width, height and framerate
+  // default format is: sequenceName_widthxheight_framerate.yuv
+  QRegExp rxExtendedFormat("([0-9]+)x([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)");
+  QRegExp rxExtended("([0-9]+)x([0-9]+)_([0-9]+)_([0-9]+)");
+  QRegExp rxDefault("([0-9]+)x([0-9]+)_([0-9]+)");
+  QRegExp rxSizeOnly("([0-9]+)x([0-9]+)");
+  
+  if (rxExtendedFormat.indexIn(name) > -1)
+  {
+    QString widthString = rxExtendedFormat.cap(1);
+    width = widthString.toInt();
+    
+    QString heightString = rxExtendedFormat.cap(2);
+    height = heightString.toInt();
+    
+    QString rateString = rxExtendedFormat.cap(3);
+    frameRate = rateString.toDouble();
+    
+    QString bitDepthString = rxExtendedFormat.cap(4);
+    bitDepth = bitDepthString.toInt();
+    
+    QString subSampling = rxExtendedFormat.cap(5);
+    subFormat = subSampling.toInt();
+    
+  }
+  else if (rxExtended.indexIn(name) > -1)
+  {
+    QString widthString = rxExtended.cap(1);
+    width = widthString.toInt();
+    
+    QString heightString = rxExtended.cap(2);
+    height = heightString.toInt();
+    
+    QString rateString = rxExtended.cap(3);
+    frameRate = rateString.toDouble();
+    
+    QString bitDepthString = rxExtended.cap(4);
+    bitDepth = bitDepthString.toInt();
+  }
+  else if (rxDefault.indexIn(name) > -1) {
+    QString widthString = rxDefault.cap(1);
+    width = widthString.toInt();
+    
+    QString heightString = rxDefault.cap(2);
+    height = heightString.toInt();
+    
+    QString rateString = rxDefault.cap(3);
+    frameRate = rateString.toDouble();
+    
+    bitDepth = 8; // assume 8 bit
+  }
+  else if (rxSizeOnly.indexIn(name) > -1) {
+    QString widthString = rxSizeOnly.cap(1);
+    width = widthString.toInt();
+    
+    QString heightString = rxSizeOnly.cap(2);
+    height = heightString.toInt();
+    
+    bitDepth = 8; // assume 8 bit
+  }
+  else
+  {
+    // try to find resolution indicators (e.g. 'cif', 'hd') in file name
+    if (name.contains("_cif", Qt::CaseInsensitive))
+    {
+      width = 352;
+      height = 288;
+    }
+    else if (name.contains("_qcif", Qt::CaseInsensitive))
+    {
+      width = 176;
+      height = 144;
+    }
+    else if (name.contains("_4cif", Qt::CaseInsensitive))
+    {
+      width = 704;
+      height = 576;
+    }
+  }
 }
 

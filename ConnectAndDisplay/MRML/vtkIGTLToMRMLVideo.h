@@ -39,10 +39,11 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
 
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  virtual const char*  GetIGTLName() { return "VIDEO"; };
-  virtual const char*  GetMRMLName() { return "Volume"; };
+  virtual const char*  GetIGTLName() { return IGTLName; };
+  virtual void SetIGTLName(char* name) { IGTLName = name; };
+  virtual const char*  GetMRMLName() { return "Frame"; };
   //virtual vtkIntArray* GetNodeEvents();
-  virtual vtkMRMLNode* CreateNewNode(vtkMRMLScene* scene, const char* name);
+  virtual vtkMRMLNode* CreateNewNodeWithMessage(vtkMRMLScene* scene, const char* name, igtl::MessageBase::Pointer vtkNotUsed(message));
   virtual int          IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node);
   virtual int          MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, int* size, void** igtlMsg);
 
@@ -56,6 +57,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
  protected:
   igtl::VideoMessage::Pointer OutVideoMsg;
   ISVCDecoder* decoder_;
+  char*  IGTLName;
   
   igtl::StartVideoDataMessage::Pointer StartVideoMsg;
   igtl::StopVideoMessage::Pointer StopVideoMsg;

@@ -222,8 +222,6 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   // Device Lists
   //----------------------------------------------------------------
   
-  void Runsome();
-  
   // Description:
   // Import received data from the circular buffer to the MRML scne.
   // This is currently called by vtkOpenIGTLinkIFLogic class.

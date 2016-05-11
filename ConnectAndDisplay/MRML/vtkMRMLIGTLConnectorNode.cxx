@@ -1006,7 +1006,7 @@ void vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
 
   vtkMRMLIGTLConnectorNode::NameListType::iterator nameIter;
   for (nameIter = nameList.begin(); nameIter != nameList.end(); nameIter ++)
-    {
+  {
     vtkIGTLCircularBuffer* circBuffer = GetCircularBuffer(*nameIter);
     circBuffer->StartPull();
 
@@ -1131,7 +1131,7 @@ void vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
     // to avoid accidental modification of the query queue as a result of response processing.
     std::vector< vtkMRMLIGTLQueryNode* > repliedQueryNodes;
     this->QueryQueueMutex->Lock();
-    double currentTime = vtkTimerLog::GetUniversalTime();
+    //double currentTime = vtkTimerLog::GetUniversalTime();
     if (this->QueryWaitingQueue.size() > 0 && updatedNode != NULL)
       {
       for (std::list< vtkWeakPointer<vtkMRMLIGTLQueryNode> >::iterator iter = this->QueryWaitingQueue.begin();
@@ -1171,7 +1171,7 @@ void vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
       }
     this->InvokeEvent(vtkMRMLIGTLConnectorNode::ReceiveEvent);
     circBuffer->EndPull();
-    }
+  }
 
   // Remove query nodes from the queue that are expired.
   // Process the removed nodes after the QueryQueueMutex is released
@@ -1238,11 +1238,6 @@ void vtkMRMLIGTLConnectorNode::ImportEventsFromEventBuffer()
 
 }
 
-void vtkMRMLIGTLConnectorNode::Runsome()
-{
-  int i = 0;
-  i++;
-}
 //---------------------------------------------------------------------------
 void vtkMRMLIGTLConnectorNode::PushOutgoingMessages()
 {

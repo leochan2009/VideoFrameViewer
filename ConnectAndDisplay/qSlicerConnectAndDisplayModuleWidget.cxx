@@ -110,6 +110,8 @@ void qSlicerConnectAndDisplayModuleWidget::setMRMLScene(vtkMRMLScene* scene)
   {
     d->IGTLConnectorNode = vtkMRMLIGTLConnectorNode::SafeDownCast(this->mrmlScene()->CreateNodeByClass("vtkMRMLIGTLConnectorNode"));
     d->IGTLDataQueryNode = vtkMRMLIGTLQueryNode::SafeDownCast(this->mrmlScene()->CreateNodeByClass("vtkMRMLIGTLQueryNode"));
+    this->mrmlScene()->AddNode(d->IGTLConnectorNode); //node added cause the IGTLConnectorNode be initialized
+    this->mrmlScene()->AddNode(d->IGTLDataQueryNode);
     d->converter = vtkIGTLToMRMLVideo::New();
     d->IGTLConnectorNode->RegisterMessageConverter(d->converter);
     if (d->IGTLConnectorNode)
@@ -120,8 +122,6 @@ void qSlicerConnectAndDisplayModuleWidget::setMRMLScene(vtkMRMLScene* scene)
         d->ImportDataAndEventsTimer.start(5);
       }
     }
-    this->mrmlScene()->AddNode(d->IGTLConnectorNode);
-    this->mrmlScene()->AddNode(d->IGTLDataQueryNode);
   }
 }
 
@@ -212,14 +212,14 @@ void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
   
   if(d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
   {
-    d->IGTLDataQueryNode->SetIGTLName("VIDEO");
+    d->IGTLDataQueryNode->SetIGTLName("Video");
     d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_START);
     d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
     d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
   }
   else
   {
-    d->IGTLDataQueryNode->SetIGTLName("VIDEO");
+    d->IGTLDataQueryNode->SetIGTLName("Video");
     d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_STOP);
     d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
     d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
@@ -242,11 +242,10 @@ void qSlicerConnectAndDisplayModuleWidget::updateIGTLConnectorNode()
 
 void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
   vtkMRMLAbstractLogic* l = this->logic();
   vtkSlicerConnectAndDisplayLogic * igtlLogic = vtkSlicerConnectAndDisplayLogic::SafeDownCast(l);
   if (igtlLogic)
   {
-    igtlLogic->CallConnectorTimerHander(d->IGTLConnectorNode);
+    igtlLogic->CallConnectorTimerHander();
   }
 }

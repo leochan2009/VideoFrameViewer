@@ -29,11 +29,12 @@ if(OpenIGTLink_PROTOCOL_VERSION GREATER 1)
     )
 endif()
 message(${OpenH264Lib})
+LINK_DIRECTORIES("/Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/Testing/OpenH264")
 set(${KIT}_TARGET_LIBRARIES
   ${OpenIGTLinkLib}
   ${MRML_LIBRARIES}
-  SlicerBaseLogic
   ${OpenH264Lib}
+  SlicerBaseLogic
   vtkSlicerAnnotationsModuleMRML
   vtkSlicerMarkupsModuleMRML
   )

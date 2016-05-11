@@ -32,8 +32,10 @@
 //#include <vtkSlicerColorLogic.h>
 #include <vtkMRMLColorLogic.h>
 #include <vtkMRMLColorTableNode.h>
+#include <vtkMRMLScalarVolumeNode.h>
 
 // VTK includes
+#include <vtkImageData.h>
 #include <vtkObjectFactory.h>
 #include <vtkSmartPointer.h>
 
@@ -42,6 +44,7 @@
 
 #include "vtkSlicerConnectAndDisplayLogic.h"
 
+#define NO_DELAY_DECODING
 
 int64_t getTime()
 {
@@ -51,8 +54,43 @@ int64_t getTime()
   
 }
 
-void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, const char* kpOuputFileName,
-                         int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, const char* pOptionFileName) {
+
+void ComposeByteSteam(uint8_t** inputData, SBufferInfo bufInfo, uint8_t *outputByteStream)
+{
+  int iHeight = bufInfo.UsrData.sSystemBuffer.iHeight ;
+  int iWidth = bufInfo.UsrData.sSystemBuffer.iWidth ;
+  int iStride [2] = {bufInfo.UsrData.sSystemBuffer.iStride[0],bufInfo.UsrData.sSystemBuffer.iStride[1]};
+  uint8_t* pPtr = inputData[0];
+  for (int i = 0; i < iHeight; i++)
+  {
+    for (int j = 0; j < iWidth; j++)
+    {
+      outputByteStream[i*iWidth + j] = pPtr[j];
+    }
+    pPtr += iStride[0];
+  }
+  pPtr = inputData[1];
+  for (int i = 0; i < iHeight/2; i++)
+  {
+    for (int j = 0; j < iWidth/2; j++)
+    {
+      outputByteStream[i*iWidth/2 + j + iHeight*iWidth] = pPtr[j];
+    }
+    pPtr += iStride[1];
+  }
+  pPtr = inputData[2];
+  for (int i = 0; i < iHeight/2; i++)
+  {
+    for (int j = 0; j < iWidth/2; j++)
+    {
+      outputByteStream[i*iWidth/2 + j + iHeight*iWidth*5/4] = pPtr[j];
+    }
+    pPtr += iStride[1];
+  }
+  
+}
+
+void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream) {
   
   
   unsigned long long uiTimeStamp = 0;
@@ -68,7 +106,6 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, const ch
   
   int32_t iBufPos = 0;
   int32_t i = 0;
-  int32_t iLastWidth = 0, iLastHeight = 0;
   int32_t iFrameCount = 0;
   int32_t iEndOfStreamFlag = 0;
   //for coverage test purpose
@@ -78,33 +115,6 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, const ch
   double dElapsed = 0;
   
   if (pDecoder == NULL) return;
-  
-  
-  FILE* pYuvFile    = NULL;
-  FILE* pOptionFile = NULL;
-  // Lenght input mode support
-  if (kpOuputFileName) {
-    pYuvFile = fopen (kpOuputFileName, "ab");
-    if (pYuvFile == NULL) {
-      fprintf (stderr, "Can not open yuv file to output result of decoding..\n");
-      // any options
-      //return; // can let decoder work in quiet mode, no writing any output
-    } else
-      fprintf (stderr, "Sequence output file name: %s..\n", kpOuputFileName);
-  } else {
-    fprintf (stderr, "Can not find any output file to write..\n");
-    // any options
-  }
-  
-  if (pOptionFileName) {
-    pOptionFile = fopen (pOptionFileName, "wb");
-    if (pOptionFile == NULL) {
-      fprintf (stderr, "Can not open optional file for write..\n");
-    } else
-      fprintf (stderr, "Extra optional file: %s..\n", pOptionFileName);
-  }
-  
-  printf ("------------------------------------------------------\n");
   
   if (iStreamSize <= 0) {
     fprintf (stderr, "Current Bit Stream File is too small, read error!!!!\n");
@@ -161,7 +171,6 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, const ch
     uiTimeStamp ++;
     memset (&sDstBufInfo, 0, sizeof (SBufferInfo));
     sDstBufInfo.uiInBsTimeStamp = uiTimeStamp;
-    sDstBufInfo.UsrData.sSystemBuffer.iWidth =
 #ifndef NO_DELAY_DECODING
     pDecoder->DecodeFrameNoDelay (pBuf + iBufPos, iSliceSize, pData, &sDstBufInfo);
 #else
@@ -176,19 +185,6 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, const ch
     iEnd    = getTime();
     iTotal  = iEnd - iStart;
     if (sDstBufInfo.iBufferStatus == 1) {
-      //Process((void**)pDst, &sDstBufInfo, pYuvFile);
-      iWidth  = sDstBufInfo.UsrData.sSystemBuffer.iWidth;
-      iHeight = sDstBufInfo.UsrData.sSystemBuffer.iHeight;
-      
-      if (pOptionFile != NULL) {
-        if (iWidth != iLastWidth && iHeight != iLastHeight) {
-          fwrite (&iFrameCount, sizeof (iFrameCount), 1, pOptionFile);
-          fwrite (&iWidth , sizeof (iWidth) , 1, pOptionFile);
-          fwrite (&iHeight, sizeof (iHeight), 1, pOptionFile);
-          iLastWidth  = iWidth;
-          iLastHeight = iHeight;
-        }
-      }
       ++ iFrameCount;
     }
     
@@ -200,27 +196,10 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, const ch
     memset (&sDstBufInfo, 0, sizeof (SBufferInfo));
     sDstBufInfo.uiInBsTimeStamp = uiTimeStamp;
     pDecoder->DecodeFrame2 (NULL, 0, pData, &sDstBufInfo);
-    if (sDstBufInfo.iBufferStatus == 1) {
-      pDst[0] = pData[0];
-      pDst[1] = pData[1];
-      pDst[2] = pData[2];
-    }
     iEnd    = getTime();
     iTotal = iEnd - iStart;
     if (sDstBufInfo.iBufferStatus == 1) {
-      Process ((void**)pDst, &sDstBufInfo, pYuvFile);
-      iWidth  = sDstBufInfo.UsrData.sSystemBuffer.iWidth;
-      iHeight = sDstBufInfo.UsrData.sSystemBuffer.iHeight;
-      
-      if (pOptionFile != NULL) {
-        if (iWidth != iLastWidth && iHeight != iLastHeight) {
-          fwrite (&iFrameCount, sizeof (iFrameCount), 1, pOptionFile);
-          fwrite (&iWidth , sizeof (iWidth) , 1, pOptionFile);
-          fwrite (&iHeight, sizeof (iHeight), 1, pOptionFile);
-          iLastWidth  = iWidth;
-          iLastHeight = iHeight;
-        }
-      }
+      ComposeByteSteam(pData, sDstBufInfo, outputByteStream);
       ++ iFrameCount;
     }
 #endif
@@ -238,28 +217,6 @@ label_exit:
     delete[] pBuf;
     pBuf = NULL;
   }
-  if (pYuvFile) {
-    fclose (pYuvFile);
-    pYuvFile = NULL;
-  }
-  if (pOptionFile) {
-    fclose (pOptionFile);
-    pOptionFile = NULL;
-  }
-}
-
-
-//---------------------------------------------------------------------------
-vtkStandardNewMacro(vtkIGTLToMRMLVideo);
-
-//---------------------------------------------------------------------------
-vtkIGTLToMRMLVideo::vtkIGTLToMRMLVideo()
-{
-}
-
-//---------------------------------------------------------------------------
-vtkIGTLToMRMLVideo::~vtkIGTLToMRMLVideo()
-{
 }
 
 int vtkIGTLToMRMLVideo::SetupDecoder()
@@ -274,20 +231,54 @@ int vtkIGTLToMRMLVideo::SetupDecoder()
   return 1;
 }
 
+
+//---------------------------------------------------------------------------
+vtkStandardNewMacro(vtkIGTLToMRMLVideo);
+
+//---------------------------------------------------------------------------
+vtkIGTLToMRMLVideo::vtkIGTLToMRMLVideo()
+{
+  IGTLName = "Video";
+  SetupDecoder();
+}
+
+//---------------------------------------------------------------------------
+vtkIGTLToMRMLVideo::~vtkIGTLToMRMLVideo()
+{
+}
+
 //---------------------------------------------------------------------------
 void vtkIGTLToMRMLVideo::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->vtkObject::PrintSelf(os, indent);
 }
 
-vtkMRMLNode* vtkIGTLToMRMLVideo::CreateNewNode(vtkMRMLScene* scene, const char* name)
+vtkMRMLNode* vtkIGTLToMRMLVideo::CreateNewNodeWithMessage(vtkMRMLScene* scene, const char* name,igtl::MessageBase::Pointer vtkNotUsed(message) )
 {
-  vtkIGTLToMRMLVideo* hierarchyNode;
+  vtkSmartPointer<vtkMRMLVolumeNode> volumeNode = vtkSmartPointer<vtkMRMLScalarVolumeNode>::New();
+  vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
+  volumeNode->SetAndObserveImageData(image);
+  volumeNode->SetName(name);
   
-  hierarchyNode = vtkIGTLToMRMLVideo::New();
+  scene->SaveStateForUndo();
   
-  vtkMRMLNode* n = scene->AddNode(vtkMRMLNode::SafeDownCast(hierarchyNode));
-  hierarchyNode->Delete();
+  vtkDebugMacro("Setting scene info");
+  volumeNode->SetScene(scene);
+  volumeNode->SetDescription("Received by OpenIGTLink");
+  
+  ///double range[2];
+  vtkDebugMacro("Set basic display info");
+  //volumeNode->GetImageData()->GetScalarRange(range);
+  //range[0] = 0.0;
+  //range[1] = 256.0;
+  //displayNode->SetLowerThreshold(range[0]);
+  //displayNode->SetUpperThreshold(range[1]);
+  //displayNode->SetWindow(range[1] - range[0]);
+  //displayNode->SetLevel(0.5 * (range[1] + range[0]) );
+  
+  vtkDebugMacro("Name vol node "<<volumeNode->GetClassName());
+  vtkMRMLNode* n = scene->AddNode(volumeNode);
+
   
   return n;
 }
@@ -300,27 +291,31 @@ vtkIntArray* vtkIGTLToMRMLVideo::GetNodeEvents()
   events = vtkIntArray::New();
   return events;
 }*/
-
+#include "igtlMessageDebugFunction.h"
 //---------------------------------------------------------------------------
 int vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node)
 {
   igtl::VideoMessage::Pointer videoMsg;
   videoMsg = igtl::VideoMessage::New();
-  videoMsg->Copy(buffer);
+  videoMsg->AllocatePack(buffer->GetBodySizeToRead());
+  memcpy(videoMsg->GetPackBodyPointer(),(unsigned char*) buffer->GetPackBodyPointer(),buffer->GetBodySizeToRead());
+  TestDebugCharArrayCmp(buffer->GetPackBodyPointer(),(unsigned char*) videoMsg->GetPackBodyPointer(), 100);
   // Deserialize the transform data
   // If you want to skip CRC check, call Unpack() without argument.
   videoMsg->Unpack();
-  
+  std::cerr<<"line Break"<<std::endl;
+  TestDebugCharArrayCmp(videoMsg->GetPackBodyPointer(),(unsigned char*) videoMsg->GetPackFragmentPointer(1), 100);
+  std::cerr<<"line Break"<<std::endl;
+  TestDebugCharArrayCmp(buffer->GetPackBodyPointer(),(unsigned char*) videoMsg->GetPackFragmentPointer(2), 100);
   if (igtl::MessageHeader::UNPACK_BODY)
   {
     //SFrameBSInfo * info  = (SFrameBSInfo *)videoMsg->GetPackFragmentPointer(2); //Here the m_Frame point is receive, the m_FrameHeader is at index 1, we need to check what information we need to put into the image header.
-    uint8_t* data[3];
+    
     SBufferInfo bufInfo;
-    memset (data, 0, sizeof (data));
     memset (&bufInfo, 0, sizeof (SBufferInfo));
     int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
-    //DECODING_STATE rv = decoder_->DecodeFrame( (const unsigned char *)info, iSrcLen, ppDst, pStride, pStride[0], pStride[1]);
-    H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), "", iWidth, iHeight, streamLength, NULL);
+    uint8_t* YUVFrame = new uint8_t[iHeight*iWidth*3/2];
+    H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUVFrame);
     return 1;
   }
 

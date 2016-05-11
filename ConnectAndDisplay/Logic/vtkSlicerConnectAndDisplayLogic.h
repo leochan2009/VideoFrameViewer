@@ -42,36 +42,126 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_LOGIC_EXPORT vtkSlicerConnectAndDispla
   public vtkSlicerModuleLogic
 {
 public:
-
+  
+  enum {  // Events
+    StatusUpdateEvent       = 50001,
+    //SliceUpdateEvent        = 50002,
+  };
+  
+  typedef struct {
+    std::string name;
+    std::string type;
+    int io;
+    std::string nodeID;
+  } IGTLMrmlNodeInfoType;
+  
+  typedef std::vector<IGTLMrmlNodeInfoType>         IGTLMrmlNodeListType;
+  typedef std::vector<vtkIGTLToMRMLBase*>           MessageConverterListType;
+  
+  // Work phase keywords used in NaviTrack (defined in BRPTPRInterface.h)
+  
+public:
+  
   static vtkSlicerConnectAndDisplayLogic *New();
   vtkTypeMacro(vtkSlicerConnectAndDisplayLogic, vtkSlicerModuleLogic);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream&, vtkIndent);
   
-  typedef std::vector<vtkIGTLToMRMLBase*>           MessageConverterListType;
-
+  /// The selected transform node is observed for TransformModified events and the transform
+  /// data is copied to the slice nodes depending on the current mode
+  
+  virtual void SetMRMLSceneInternal(vtkMRMLScene * newScene);
+  
+  virtual void RegisterNodes();
+  
+  //----------------------------------------------------------------
+  // Events
+  //----------------------------------------------------------------
+  
+  virtual void OnMRMLSceneEndImport();
+  
+  virtual void OnMRMLSceneNodeAdded(vtkMRMLNode* /*node*/);
+  
+  virtual void OnMRMLSceneNodeRemoved(vtkMRMLNode* /*node*/);
+  
+  virtual void OnMRMLNodeModified(vtkMRMLNode* /*node*/){}
+  
+  //----------------------------------------------------------------
+  // Connector and converter Management
+  //----------------------------------------------------------------
+  
+  // Access connectors
+  vtkMRMLIGTLConnectorNode* GetConnector(const char* conID);
+  
   // Call timer-driven routines for each connector
-  void CallConnectorTimerHander(vtkMRMLIGTLConnectorNode * connector);
+  void                      CallConnectorTimerHander();
+  
+  // Device Name management
+  int  SetRestrictDeviceName(int f);
   
   int  RegisterMessageConverter(vtkIGTLToMRMLBase* converter);
   int  UnregisterMessageConverter(vtkIGTLToMRMLBase* converter);
-
+  
+  unsigned int       GetNumberOfConverters();
+  vtkIGTLToMRMLBase* GetConverter(unsigned int i);
+  vtkIGTLToMRMLBase* GetConverterByMRMLTag(const char* mrmlTag);
+  vtkIGTLToMRMLBase* GetConverterByDeviceType(const char* deviceType);
+  
+  //----------------------------------------------------------------
+  // MRML Management
+  //----------------------------------------------------------------
+  
+  virtual void ProcessMRMLNodesEvents(vtkObject* caller, unsigned long event, void * callData);
+  //virtual void ProcessLogicEvents(vtkObject * caller, unsigned long event, void * callData);
+  
+  void ProcCommand(const char* nodeName, int size, unsigned char* data);
+  
+  void GetDeviceNamesFromMrml(IGTLMrmlNodeListType &list);
+  void GetDeviceNamesFromMrml(IGTLMrmlNodeListType &list, const char* mrmlTagName);
+  //void GetDeviceTypes(std::vector<char*> &list);
+  
 protected:
+  
+  //----------------------------------------------------------------
+  // Constructor, destructor etc.
+  //----------------------------------------------------------------
+  
   vtkSlicerConnectAndDisplayLogic();
   virtual ~vtkSlicerConnectAndDisplayLogic();
-
-  virtual void SetMRMLSceneInternal(vtkMRMLScene* newScene);
-  /// Register MRML Node classes to Scene. Gets called automatically when the MRMLScene is attached to this logic class.
-  virtual void RegisterNodes();
-  virtual void UpdateFromMRMLScene();
-  virtual void OnMRMLSceneNodeAdded(vtkMRMLNode* node);
-  virtual void OnMRMLSceneNodeRemoved(vtkMRMLNode* node);
+  
+  static void DataCallback(vtkObject*, unsigned long, void *, void *);
+  
+  void AddMRMLConnectorNodeObserver(vtkMRMLIGTLConnectorNode * connectorNode);
+  void RemoveMRMLConnectorNodeObserver(vtkMRMLIGTLConnectorNode * connectorNode);
+  
+  void RegisterMessageConverters(vtkMRMLIGTLConnectorNode * connectorNode);
+  
+  void UpdateAll();
+  void UpdateSliceDisplay();
+  vtkCallbackCommand *DataCallbackCommand;
+  
 private:
-  vtkIGTLToMRMLVideo* VideoConverter;
+  
+  int Initialized;
+  
+  //----------------------------------------------------------------
+  // Connector Management
+  //----------------------------------------------------------------
   
   //ConnectorMapType              ConnectorMap;
   MessageConverterListType      MessageConverterList;
+  
+  //int LastConnectorID;
+  int RestrictDeviceName;
+  
+  //----------------------------------------------------------------
+  // IGTL-MRML converters
+  //----------------------------------------------------------------
+  vtkIGTLToMRMLVideo * VideoConverter;
+  
+private:
+  
   vtkSlicerConnectAndDisplayLogic(const vtkSlicerConnectAndDisplayLogic&); // Not implemented
-  void operator=(const vtkSlicerConnectAndDisplayLogic&); // Not implemented
+  void operator=(const vtkSlicerConnectAndDisplayLogic&);               // Not implemented
 };
 
 #endif
