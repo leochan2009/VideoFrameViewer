@@ -225,7 +225,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   // Description:
   // Import received data from the circular buffer to the MRML scne.
   // This is currently called by vtkOpenIGTLinkIFLogic class.
-  void ImportDataFromCircularBuffer();
+  uint8_t* ImportDataFromCircularBuffer();
 
   // Description:
   // Import events from the event buffer to the MRML scene.
@@ -317,6 +317,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   // Get OpenIGTLink's time stamp information. Returns 0, if it fails to obtain time stamp.
   int GetIGTLTimeStamp(vtkMRMLNode* node, int& second, int& nanosecond);
 
+  
+  virtual void setInterval (int timeInterva){interval = timeInterva;};
 
  protected:
 
@@ -424,6 +426,10 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   NodeInfoMapType          IncomingMRMLNodeInfoMap;
 
   int CheckCRC;
+  
+  uint8_t* RGBFrame;
+  
+  int interval;
 
 };
 

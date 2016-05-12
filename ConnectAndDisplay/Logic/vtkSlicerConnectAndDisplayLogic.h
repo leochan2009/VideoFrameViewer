@@ -93,7 +93,7 @@ public:
   vtkMRMLIGTLConnectorNode* GetConnector(const char* conID);
   
   // Call timer-driven routines for each connector
-  void                      CallConnectorTimerHander();
+  uint8_t*  CallConnectorTimerHander();
   
   // Device Name management
   int  SetRestrictDeviceName(int f);
@@ -143,6 +143,7 @@ private:
   
   int Initialized;
   
+  unsigned char* RGBFrame;
   //----------------------------------------------------------------
   // Connector Management
   //----------------------------------------------------------------

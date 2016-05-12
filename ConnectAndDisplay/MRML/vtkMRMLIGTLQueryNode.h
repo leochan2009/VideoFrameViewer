@@ -140,7 +140,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLQueryNode : pub
 
   static const char* QueryStatusToString(int queryStatus);
   static const char* QueryTypeToString(int queryType);
-
+  
  protected:
   //----------------------------------------------------------------
   // Constructor and destroctor
@@ -167,7 +167,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLQueryNode : pub
 
   int QueryStatus;
   int QueryType;
-
+  
   double TimeStamp;
   double TimeOut;
 

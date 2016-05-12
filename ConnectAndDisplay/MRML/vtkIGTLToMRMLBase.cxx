@@ -131,3 +131,9 @@ int vtkIGTLToMRMLBase::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode
   return 0;
 }
 
+
+//---------------------------------------------------------------------------
+uint8_t * vtkIGTLToMRMLBase::IGTLToMRML(igtl::MessageBase::Pointer buffer)
+{
+  return NULL;
+}

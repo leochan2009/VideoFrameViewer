@@ -229,14 +229,14 @@ vtkMRMLIGTLConnectorNode* vtkSlicerConnectAndDisplayLogic::GetConnector(const ch
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerConnectAndDisplayLogic::CallConnectorTimerHander()
+uint8_t* vtkSlicerConnectAndDisplayLogic::CallConnectorTimerHander()
 {
   //ConnectorMapType::iterator cmiter;
   std::vector<vtkMRMLNode*> nodes;
   this->GetMRMLScene()->GetNodesByClass("vtkMRMLIGTLConnectorNode", nodes);
   
   std::vector<vtkMRMLNode*>::iterator iter;
-  
+  RGBFrame = NULL;
   //for (cmiter = this->ConnectorMap.begin(); cmiter != this->ConnectorMap.end(); cmiter ++)
   for (iter = nodes.begin(); iter != nodes.end(); iter ++)
   {
@@ -245,10 +245,11 @@ void vtkSlicerConnectAndDisplayLogic::CallConnectorTimerHander()
     {
       continue;
     }
-    connector->ImportDataFromCircularBuffer();
+    RGBFrame = connector->ImportDataFromCircularBuffer();
     connector->ImportEventsFromEventBuffer();
     connector->PushOutgoingMessages();
   }
+  return RGBFrame;
 }
 
 

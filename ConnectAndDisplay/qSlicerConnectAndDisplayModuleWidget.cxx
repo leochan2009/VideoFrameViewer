@@ -212,10 +212,15 @@ void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
   
   if(d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
   {
-    d->IGTLDataQueryNode->SetIGTLName("Video");
-    d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_START);
-    d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
-    d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
+    if (d->FrameFrequency->text().toInt()>0.0000001 && d->FrameFrequency->text().toInt()<1000000)
+    {
+      d->IGTLDataQueryNode->SetIGTLName("Video");
+      int interval = (int) (1000.0 / d->FrameFrequency->text().toInt());
+      d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_START);
+      d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
+      d->IGTLConnectorNode->setInterval(interval);
+      d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
+    }
   }
   else
   {
@@ -242,10 +247,39 @@ void qSlicerConnectAndDisplayModuleWidget::updateIGTLConnectorNode()
 
 void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
 {
+  Q_D(qSlicerConnectAndDisplayModuleWidget);
   vtkMRMLAbstractLogic* l = this->logic();
   vtkSlicerConnectAndDisplayLogic * igtlLogic = vtkSlicerConnectAndDisplayLogic::SafeDownCast(l);
   if (igtlLogic)
   {
-    igtlLogic->CallConnectorTimerHander();
+    uint8_t* RGBFrame = NULL;
+    RGBFrame = igtlLogic->CallConnectorTimerHander();
+    //-------------------
+    int p_width = 1280, p_height = 720;
+    //int sizeInMB = (p_width*p_height) >> 20;  //RGBFrame size should be acquired from somewhere
+    
+    // Convert the image in p_PixmapConversionBuffer to a QPixmap
+    QImage tmpImage(RGBFrame, p_width,p_height,p_width*3, QImage::Format_RGB888);
+    if (RGBFrame)
+    {
+      QPixmap* cachedFrame = new QPixmap();
+      cachedFrame->convertFromImage(tmpImage);
+      QGraphicsScene *scn = new QGraphicsScene( d->graphicsView );
+      scn->setSceneRect( d->graphicsView->rect() );
+      d->graphicsView->setScene( scn );
+      d->graphicsView->setFixedSize( p_width, p_height );
+      d->graphicsView->rect().setWidth(p_width);
+      d->graphicsView->rect().setHeight(p_height);
+      scn->addPixmap(*cachedFrame);
+      d->graphicsView->show();
+      delete cachedFrame;
+      /*d->graphicsView->rect().setWidth(p_width);
+      d->graphicsView->rect().setHeight(p_height);
+      QPainter painter(d->graphicsView);
+      QPixmap cachedFrame = QPixmap();
+      cachedFrame.convertFromImage(tmpImage);
+      painter.drawPixmap(d->graphicsView->rect(), cachedFrame, cachedFrame.rect());
+      d->graphicsView->show();*/
+    }
   }
 }

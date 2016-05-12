@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>584</width>
-    <height>319</height>
+    <width>814</width>
+    <height>797</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,13 +19,23 @@
      <property name="title">
       <string/>
      </property>
-     <widget class="QWidget" name="layoutWidget">
+     <widget class="QGraphicsView" name="graphicsView">
       <property name="geometry">
        <rect>
-        <x>170</x>
-        <y>25</y>
-        <width>281</width>
-        <height>151</height>
+        <x>130</x>
+        <y>180</y>
+        <width>381</width>
+        <height>391</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QWidget" name="">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>40</y>
+        <width>205</width>
+        <height>121</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -40,6 +50,36 @@
          </item>
          <item>
           <widget class="QLineEdit" name="ConnectorPortEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <item>
+          <widget class="QLabel" name="FrequencyLabel">
+           <property name="text">
+            <string>Frequency:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="FrameFrequency">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -167,8 +207,6 @@
  </customwidgets>
  <tabstops>
   <tabstop>ConnectorStateCheckBox</tabstop>
-  <tabstop>checkBox</tabstop>
-  <tabstop>ConnectorPortEdit</tabstop>
  </tabstops>
  <resources/>
  <connections/>

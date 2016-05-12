@@ -90,7 +90,10 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
   // If mrmlNode is QueryNode, the function will generate query node. (event is not used.)
   virtual int          IGTLToMRML(igtl::MessageBase::Pointer buffer,
                                   vtkMRMLNode* node);
-
+  // Description:
+  // Functions to convert OpenIGTLink message to uint8_t stream data for further procession.
+  // If mrmlNode is QueryNode, the function will generate query node. (event is not used.)
+  virtual uint8_t *    IGTLToMRML(igtl::MessageBase::Pointer buffer);
   // Description:
   // Functions to generate an OpenIGTLink message
   // If mrmlNode is QueryNode, the function will generate query node. (event is not used.)
@@ -115,7 +118,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
   virtual void SetVisibility(int vtkNotUsed(sw),
                              vtkMRMLScene * vtkNotUsed(scene),
                              vtkMRMLNode * vtkNotUsed(node)) {};
-
+  virtual void setInterval(int timeInterval){interval = timeInterval;};
  protected:
   vtkIGTLToMRMLBase();
   ~vtkIGTLToMRMLBase();
@@ -126,6 +129,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
   std::vector<std::string>  IGTLNames;
 
   int CheckCRC;
+  
+  int interval;
 
   vtkIGTLToMRMLBasePrivate* Private;
 };

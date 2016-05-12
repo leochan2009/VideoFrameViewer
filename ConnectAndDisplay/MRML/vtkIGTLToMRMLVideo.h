@@ -44,9 +44,12 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
   virtual const char*  GetMRMLName() { return "Frame"; };
   //virtual vtkIntArray* GetNodeEvents();
   virtual vtkMRMLNode* CreateNewNodeWithMessage(vtkMRMLScene* scene, const char* name, igtl::MessageBase::Pointer vtkNotUsed(message));
-  virtual int          IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node);
+  virtual uint8_t * IGTLToMRML(igtl::MessageBase::Pointer buffer);
   virtual int          MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, int* size, void** igtlMsg);
 
+  int YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth);
+  
+  virtual void setInterval(int timeInterval) {interval = timeInterval;};
 
  protected:
   vtkIGTLToMRMLVideo();
@@ -54,11 +57,12 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
 
   int IGTLToVTKScalarType(int igtlType);
   int SetupDecoder();
+  uint8_t *RGBFrame;
  protected:
   igtl::VideoMessage::Pointer OutVideoMsg;
   ISVCDecoder* decoder_;
   char*  IGTLName;
-  
+  int interval;
   igtl::StartVideoDataMessage::Pointer StartVideoMsg;
   igtl::StopVideoMessage::Pointer StopVideoMsg;
 

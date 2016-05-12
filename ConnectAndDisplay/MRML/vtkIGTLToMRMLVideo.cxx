@@ -238,8 +238,9 @@ vtkStandardNewMacro(vtkIGTLToMRMLVideo);
 //---------------------------------------------------------------------------
 vtkIGTLToMRMLVideo::vtkIGTLToMRMLVideo()
 {
-  IGTLName = "Video";
+  IGTLName = (char*)"Video";
   SetupDecoder();
+  RGBFrame = NULL;
 }
 
 //---------------------------------------------------------------------------
@@ -282,18 +283,10 @@ vtkMRMLNode* vtkIGTLToMRMLVideo::CreateNewNodeWithMessage(vtkMRMLScene* scene, c
   
   return n;
 }
-/*
-//---------------------------------------------------------------------------
-vtkIntArray* vtkIGTLToMRMLVideo::GetNodeEvents()
-{
-  vtkIntArray* events;
-  
-  events = vtkIntArray::New();
-  return events;
-}*/
+
 #include "igtlMessageDebugFunction.h"
 //---------------------------------------------------------------------------
-int vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node)
+uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
 {
   igtl::VideoMessage::Pointer videoMsg;
   videoMsg = igtl::VideoMessage::New();
@@ -314,13 +307,77 @@ int vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNod
     SBufferInfo bufInfo;
     memset (&bufInfo, 0, sizeof (SBufferInfo));
     int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
-    uint8_t* YUVFrame = new uint8_t[iHeight*iWidth*3/2];
-    H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUVFrame);
-    return 1;
+    RGBFrame = new uint8_t[iHeight*iWidth*3];
+    uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
+    H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+    bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
+    return RGBFrame;
   }
 
-  return 0;
+  return NULL;
 
+}
+
+int vtkIGTLToMRMLVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth)
+{
+  int componentLength = iHeight*iWidth;
+  const uint8_t *srcY = YUV420Frame;
+  const uint8_t *srcU = YUV420Frame + componentLength;
+  const uint8_t *srcV = srcY + componentLength + componentLength/4;
+  uint8_t * YUV444 = new uint8_t[componentLength * 3];
+  uint8_t *dstY = YUV444;
+  uint8_t *dstU = dstY + componentLength;
+  uint8_t *dstV = dstU + componentLength;
+
+  memcpy(dstY, srcY, componentLength);
+  int y;
+#pragma omp parallel for default(none) shared(dstV,dstU,srcV,srcU)
+  for (y = 0; y < iHeight/2; y++) {
+    for (int x = 0; x < iWidth/2; x++) {
+      dstU[2 * x + 2 * y*iWidth] = dstU[2 * x + 1 + 2 * y*iWidth] = srcU[x + y*iWidth/2];
+      dstV[2 * x + 2 * y*iWidth] = dstV[2 * x + 1 + 2 * y*iWidth] = srcV[x + y*iWidth/2];
+    }
+    memcpy(&dstU[(2 * y + 1)*iWidth], &dstU[(2 * y)*iWidth], iWidth);
+    memcpy(&dstV[(2 * y + 1)*iWidth], &dstV[(2 * y)*iWidth], iWidth);
+  }
+  
+  
+  const int yOffset = 16;
+  const int cZero = 128;
+  int yMult, rvMult, guMult, gvMult, buMult;
+  yMult =   76309;
+  rvMult = 117489;
+  guMult = -13975;
+  gvMult = -34925;
+  buMult = 138438;
+  
+  static unsigned char clp_buf[384+256+384];
+  static unsigned char *clip_buf = clp_buf+384;
+  
+  // initialize clipping table
+  memset(clp_buf, 0, 384);
+  int i;
+  for (i = 0; i < 256; i++) {
+    clp_buf[384+i] = i;
+  }
+  memset(clp_buf+384+256, 255, 384);
+  
+  
+#pragma omp parallel for default(none) private(i) shared(srcY,srcU,srcV,dstMem,yMult,rvMult,guMult,gvMult,buMult,clip_buf,componentLength)// num_threads(2)
+  for (i = 0; i < componentLength; ++i) {
+    const int Y_tmp = ((int)dstY[i] - yOffset) * yMult;
+    const int U_tmp = (int)dstU[i] - cZero;
+    const int V_tmp = (int)dstV[i] - cZero;
+    
+    const int R_tmp = (Y_tmp                  + V_tmp * rvMult ) >> 16;//32 to 16 bit conversion by left shifting
+    const int G_tmp = (Y_tmp + U_tmp * guMult + V_tmp * gvMult ) >> 16;
+    const int B_tmp = (Y_tmp + U_tmp * buMult                  ) >> 16;
+    
+    RGBFrame[3*i]   = clip_buf[R_tmp];
+    RGBFrame[3*i+1] = clip_buf[G_tmp];
+    RGBFrame[3*i+2] = clip_buf[B_tmp];
+  }
+  return 1;
 }
 
 //---------------------------------------------------------------------------
@@ -342,6 +399,7 @@ int vtkIGTLToMRMLVideo::MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, i
           this->StartVideoMsg = igtl::StartVideoDataMessage::New();
           }
         this->StartVideoMsg->SetDeviceName(qnode->GetIGTLDeviceName());
+        this->StartVideoMsg->SetResolution(this->interval);
         this->StartVideoMsg->Pack();
         *size = this->StartVideoMsg->GetPackSize();
         *igtlMsg = this->StartVideoMsg->GetPackPointer();

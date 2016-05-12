@@ -999,10 +999,11 @@ vtkIGTLCircularBuffer* vtkMRMLIGTLConnectorNode::GetCircularBuffer(std::string& 
 
 
 //---------------------------------------------------------------------------
-void vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
+uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
 {
   vtkMRMLIGTLConnectorNode::NameListType nameList;
   GetUpdatedBuffersList(nameList);
+  RGBFrame = NULL;
 
   vtkMRMLIGTLConnectorNode::NameListType::iterator nameIter;
   for (nameIter = nameList.begin(); nameIter != nameList.end(); nameIter ++)
@@ -1079,44 +1080,15 @@ void vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
         if (nCol == 0)
           {
           // Call the advanced creation call first to see if the requested converter needs the message itself
-          vtkMRMLNode* node = converter->CreateNewNodeWithMessage(this->GetScene(), buffer->GetDeviceName(), buffer);
-          NodeInfoType* nodeInfo = RegisterIncomingMRMLNode(node);
-          node->DisableModifiedEventOn();
-          converter->IGTLToMRML(buffer, node);
-
-          // Save OpenIGTLink time stamp
-          igtl::TimeStamp::Pointer ts = igtl::TimeStamp::New();
-          buffer->GetTimeStamp(ts);
-          nodeInfo->second = ts->GetSecond();
-          nodeInfo->nanosecond = ts->GetNanosecond();
-
-          node->Modified();  // in case converter doesn't call any Modifieds itself
-          node->DisableModifiedEventOff();
-          node->InvokePendingModifiedEvent();
-          updatedNode = node;
-          this->InvokeEvent(vtkMRMLIGTLConnectorNode::NewDeviceEvent, node);
+          RGBFrame = converter->IGTLToMRML(buffer);
           }
         else
           {
           for (int i = 0; i < nCol; i ++)
             {
-            vtkMRMLNode* node = vtkMRMLNode::SafeDownCast(collection->GetItemAsObject(i));
-            NodeInfoType* nodeInfo = RegisterIncomingMRMLNode(node);
-            node->DisableModifiedEventOn();
-            converter->IGTLToMRML(buffer, node);
+              RGBFrame = converter->IGTLToMRML(buffer);
 
-            // Save OpenIGTLink time stamp
-            // TODO: avoid calling New() every time.
-            igtl::TimeStamp::Pointer ts = igtl::TimeStamp::New();
-            buffer->GetTimeStamp(ts);
-            nodeInfo->second = ts->GetSecond();
-            nodeInfo->nanosecond = ts->GetNanosecond();
-
-            node->Modified();  // in case converter doesn't call any Modifieds itself
-            node->DisableModifiedEventOff();
-            node->InvokePendingModifiedEvent();
-            updatedNode = node;
-            break;
+              break;
             // TODO: QueueNode supposes that there is only unique combination of type and node name,
             // but it should be able to hold multiple nodes.
             }
@@ -1210,6 +1182,7 @@ void vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
     (*iter)->SetQueryStatus(vtkMRMLIGTLQueryNode::STATUS_EXPIRED);
     (*iter)->InvokeEvent(vtkMRMLIGTLQueryNode::ResponseEvent);
     }
+  return RGBFrame;
 }
 
 //---------------------------------------------------------------------------
@@ -1679,6 +1652,7 @@ void vtkMRMLIGTLConnectorNode::PushQuery(vtkMRMLIGTLQueryNode* node)
 
   int size=0;
   void* igtlMsg=NULL;
+  converter->setInterval(this->interval);
   converter->MRMLToIGTL(0, node, &size, &igtlMsg);
   if (size<=0)
     {

@@ -33,6 +33,8 @@ class vtkMRMLNode;
 class vtkMRMLScene;
 class vtkObject;
 
+
+
 /// \ingroup Slicer_QtModules_ExtensionTemplate
 class Q_SLICER_QTMODULES_CONNECTANDDISPLAY_EXPORT qSlicerConnectAndDisplayModuleWidget :
   public qSlicerAbstractModuleWidget
@@ -74,6 +76,7 @@ protected:
 private:
   Q_DECLARE_PRIVATE(qSlicerConnectAndDisplayModuleWidget);
   Q_DISABLE_COPY(qSlicerConnectAndDisplayModuleWidget);
+  
 };
 
 #endif
