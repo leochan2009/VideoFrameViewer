@@ -44,6 +44,16 @@ Version:   $Revision: 1.2 $
 #include <sstream>
 #include <map>
 
+namespace Connector{
+  int64_t getTime()
+  {
+    struct timeval tv_date;
+    gettimeofday(&tv_date, NULL);
+    return ((int64_t) tv_date.tv_sec * 1000000 + (int64_t) tv_date.tv_usec);
+    
+  }
+}
+
 //------------------------------------------------------------------------------
 vtkMRMLNodeNewMacro(vtkMRMLIGTLConnectorNode);
 
@@ -66,6 +76,8 @@ const char *vtkMRMLIGTLConnectorNode::ConnectorStateStr[vtkMRMLIGTLConnectorNode
 //----------------------------------------------------------------------------
 vtkMRMLIGTLConnectorNode::vtkMRMLIGTLConnectorNode()
 {
+  this->RGBFrame = new uint8_t[1280*720*3];
+  this->conversionFinish = false;
   this->HideFromEditors = false;
 
   this->Type   = TYPE_NOT_DEFINED;
@@ -678,7 +690,7 @@ void* vtkMRMLIGTLConnectorNode::ThreadFunction(void* ptr)
       igtlcon->RequestInvokeEvent(vtkMRMLIGTLConnectorNode::ConnectedEvent);
       //vtkErrorMacro("vtkOpenIGTLinkIFLogic::ThreadFunction(): Client Connected.");
       igtlcon->RequestPushOutgoingMessages();
-      igtlcon->ReceiveController();
+      igtlcon->ReceiveController(igtlcon);
       igtlcon->State = STATE_WAIT_CONNECTION;
       igtlcon->RequestInvokeEvent(vtkMRMLIGTLConnectorNode::DisconnectedEvent); // need to Request the InvokeEvent, because we are not on the main thread now
       }
@@ -775,7 +787,7 @@ int vtkMRMLIGTLConnectorNode::WaitForConnection()
 
 
 //----------------------------------------------------------------------------
-int vtkMRMLIGTLConnectorNode::ReceiveController()
+int vtkMRMLIGTLConnectorNode::ReceiveController(vtkMRMLIGTLConnectorNode* igtlcon)
 {
   //igtl_header header;
   igtl::MessageHeader::Pointer headerMsg;
@@ -889,25 +901,26 @@ int vtkMRMLIGTLConnectorNode::ReceiveController()
     vtkIGTLCircularBuffer* circBuffer = this->Buffer[key];
 
     if (circBuffer && circBuffer->StartPush() != -1)
-      {
+    {
       //std::cerr << "Pushing into the circular buffer." << std::endl;
       circBuffer->StartPush();
 
       igtl::MessageBase::Pointer buffer = circBuffer->GetPushBuffer();
       buffer->SetMessageHeader(headerMsg);
       buffer->AllocatePack();
-
       int read = this->Socket->Receive(buffer->GetPackBodyPointer(), buffer->GetPackBodySize());
+      std::cerr<< " read " << buffer->GetPackBodySize() <<std::endl;
       if (read != buffer->GetPackBodySize())
         {
         vtkErrorMacro ("Only read " << read << " but expected to read "
                        << buffer->GetPackBodySize() << "\n");
         continue;
         }
-
       circBuffer->EndPush();
-
-      }
+      igtlcon->conversionFinish = false;
+      while(!igtlcon->conversionFinish)
+        circBuffer->conditionVar->Wait(circBuffer->localMutex);
+    }
     else
       {
       break;
@@ -1003,8 +1016,6 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
 {
   vtkMRMLIGTLConnectorNode::NameListType nameList;
   GetUpdatedBuffersList(nameList);
-  RGBFrame = NULL;
-
   vtkMRMLIGTLConnectorNode::NameListType::iterator nameIter;
   for (nameIter = nameList.begin(); nameIter != nameList.end(); nameIter ++)
   {
@@ -1039,8 +1050,6 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
          inIter != this->IncomingMRMLNodeInfoMap.end();
          inIter ++)
       {
-      //vtkMRMLNode* node = (*inIter).node;
-      //vtkMRMLNode* node = (inIter->second).node;
       vtkMRMLNode* node = scene->GetNodeByID((inIter->first));
       if (node &&
           strcmp(node->GetNodeTagName(), converter->GetMRMLName()) == 0 &&
@@ -1054,8 +1063,6 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
           // Save OpenIGTLink time stamp
           igtl::TimeStamp::Pointer ts = igtl::TimeStamp::New();
           buffer->GetTimeStamp(ts);
-          //(*inIter).second = ts->GetSecond();
-          //(*inIter).nanosecond = ts->GetNanosecond();
           (inIter->second).second = ts->GetSecond();
           (inIter->second).nanosecond = ts->GetNanosecond();
           //node->SetAttribute("IGTLTime", )
@@ -1079,15 +1086,20 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
         int nCol = collection->GetNumberOfItems();
         if (nCol == 0)
           {
-          // Call the advanced creation call first to see if the requested converter needs the message itself
-          RGBFrame = converter->IGTLToMRML(buffer);
+            // Call the advanced creation call first to see if the requested converter needs the message itself
+            int64_t startTime = Connector::getTime();
+            this->conversionFinish = false;
+            RGBFrame = converter->IGTLToMRML(buffer);
+            if (RGBFrame)
+              this->conversionFinish = true;
+            circBuffer->conditionVar->Signal();
+            std::cerr<<"conversion time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
           }
         else
           {
           for (int i = 0; i < nCol; i ++)
             {
               RGBFrame = converter->IGTLToMRML(buffer);
-
               break;
             // TODO: QueueNode supposes that there is only unique combination of type and node name,
             // but it should be able to hold multiple nodes.
@@ -1182,7 +1194,9 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
     (*iter)->SetQueryStatus(vtkMRMLIGTLQueryNode::STATUS_EXPIRED);
     (*iter)->InvokeEvent(vtkMRMLIGTLQueryNode::ResponseEvent);
     }
-  return RGBFrame;
+  if (this->conversionFinish)
+    return RGBFrame;
+  return NULL;
 }
 
 //---------------------------------------------------------------------------

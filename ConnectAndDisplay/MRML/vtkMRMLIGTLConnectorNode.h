@@ -43,6 +43,10 @@ class vtkMultiThreader;
 class vtkMutexLock;
 class vtkIGTLCircularBuffer;
 
+namespace Connector{
+  int64_t getTime();
+}
+
 class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode : public vtkMRMLNode
 {
 
@@ -206,7 +210,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   // OpenIGTLink Message handlers
   //----------------------------------------------------------------
   int WaitForConnection();
-  int ReceiveController();
+  int ReceiveController(vtkMRMLIGTLConnectorNode* igtlcon );
   int SendData(int size, unsigned char* data);
   int Skip(int length, int skipFully=1);
 
@@ -430,6 +434,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   uint8_t* RGBFrame;
   
   int interval;
+  
+  bool conversionFinish;
 
 };
 

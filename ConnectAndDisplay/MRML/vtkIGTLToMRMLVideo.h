@@ -57,6 +57,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
 
   int IGTLToVTKScalarType(int igtlType);
   int SetupDecoder();
+  void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream);
   uint8_t *RGBFrame;
  protected:
   igtl::VideoMessage::Pointer OutVideoMsg;
@@ -65,6 +66,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
   int interval;
   igtl::StartVideoDataMessage::Pointer StartVideoMsg;
   igtl::StopVideoMessage::Pointer StopVideoMsg;
+  uint8_t* pData[3];
 
 };
 

@@ -1,16 +1,16 @@
 /*==========================================================================
-
-  Portions (c) Copyright 2008-2009 Brigham and Women's Hospital (BWH) All Rights Reserved.
-
-  See Doc/copyright/copyright.txt
-  or http://www.slicer.org/copyright/copyright.txt for details.
-
-  Program:   3D Slicer
-  Module:    $HeadURL: http://svn.slicer.org/Slicer3/trunk/Modules/OpenIGTLinkIF/vtkIGTLToMRMLVideo.cxx $
-  Date:      $Date: 2010-12-07 21:39:19 -0500 (Tue, 07 Dec 2010) $
-  Version:   $Revision: 15621 $
-
-==========================================================================*/
+ 
+ Portions (c) Copyright 2008-2009 Brigham and Women's Hospital (BWH) All Rights Reserved.
+ 
+ See Doc/copyright/copyright.txt
+ or http://www.slicer.org/copyright/copyright.txt for details.
+ 
+ Program:   3D Slicer
+ Module:    $HeadURL: http://svn.slicer.org/Slicer3/trunk/Modules/OpenIGTLinkIF/vtkIGTLToMRMLVideo.cxx $
+ Date:      $Date: 2010-12-07 21:39:19 -0500 (Tue, 07 Dec 2010) $
+ Version:   $Revision: 15621 $
+ 
+ ==========================================================================*/
 
 // OpenIGTLinkIF MRML includes
 #include "vtkIGTLToMRMLVideo.h"
@@ -90,7 +90,7 @@ void ComposeByteSteam(uint8_t** inputData, SBufferInfo bufInfo, uint8_t *outputB
   
 }
 
-void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream) {
+void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream) {
   
   
   unsigned long long uiTimeStamp = 0;
@@ -100,8 +100,10 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t&
   uint8_t* pBuf = NULL;
   uint8_t uiStartCode[4] = {0, 0, 0, 1};
   
-  uint8_t* pData[3] = {NULL};
-  uint8_t* pDst[3] = {NULL};
+  pData[0] = NULL;
+  pData[1] = NULL;
+  pData[2] = NULL;
+  
   SBufferInfo sDstBufInfo;
   
   int32_t iBufPos = 0;
@@ -177,17 +179,6 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t&
     pDecoder->DecodeFrame2 (pBuf + iBufPos, iSliceSize, pData, &sDstBufInfo);
 #endif
     
-    if (sDstBufInfo.iBufferStatus == 1) {
-      pDst[0] = pData[0];
-      pDst[1] = pData[1];
-      pDst[2] = pData[2];
-    }
-    iEnd    = getTime();
-    iTotal  = iEnd - iStart;
-    if (sDstBufInfo.iBufferStatus == 1) {
-      ++ iFrameCount;
-    }
-    
 #ifdef NO_DELAY_DECODING
     iStart = getTime();
     pData[0] = NULL;
@@ -203,11 +194,14 @@ void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t&
       ++ iFrameCount;
     }
 #endif
-    dElapsed = iTotal / 1e6;
-    fprintf (stderr, "-------------------------------------------------------\n");
-    fprintf (stderr, "iWidth:\t\t%d\nheight:\t\t%d\nFrames:\t\t%d\ndecode time:\t%f sec\nFPS:\t\t%f fps\n",
-             iWidth, iHeight, iFrameCount, dElapsed, (iFrameCount * 1.0) / dElapsed);
-    fprintf (stderr, "-------------------------------------------------------\n");
+    if (iFrameCount)
+    {
+      dElapsed = iTotal / 1e6;
+      fprintf (stderr, "-------------------------------------------------------\n");
+      fprintf (stderr, "iWidth:\t\t%d\nheight:\t\t%d\nFrames:\t\t%d\ndecode time:\t%f sec\nFPS:\t\t%f fps\n",
+               iWidth, iHeight, iFrameCount, dElapsed, (iFrameCount * 1.0) / dElapsed);
+      fprintf (stderr, "-------------------------------------------------------\n");
+    }
     iBufPos += iSliceSize;
     ++ iSliceIndex;
   }
@@ -279,7 +273,7 @@ vtkMRMLNode* vtkIGTLToMRMLVideo::CreateNewNodeWithMessage(vtkMRMLScene* scene, c
   
   vtkDebugMacro("Name vol node "<<volumeNode->GetClassName());
   vtkMRMLNode* n = scene->AddNode(volumeNode);
-
+  
   
   return n;
 }
@@ -292,14 +286,9 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
   videoMsg = igtl::VideoMessage::New();
   videoMsg->AllocatePack(buffer->GetBodySizeToRead());
   memcpy(videoMsg->GetPackBodyPointer(),(unsigned char*) buffer->GetPackBodyPointer(),buffer->GetBodySizeToRead());
-  TestDebugCharArrayCmp(buffer->GetPackBodyPointer(),(unsigned char*) videoMsg->GetPackBodyPointer(), 100);
   // Deserialize the transform data
   // If you want to skip CRC check, call Unpack() without argument.
   videoMsg->Unpack();
-  std::cerr<<"line Break"<<std::endl;
-  TestDebugCharArrayCmp(videoMsg->GetPackBodyPointer(),(unsigned char*) videoMsg->GetPackFragmentPointer(1), 100);
-  std::cerr<<"line Break"<<std::endl;
-  TestDebugCharArrayCmp(buffer->GetPackBodyPointer(),(unsigned char*) videoMsg->GetPackFragmentPointer(2), 100);
   if (igtl::MessageHeader::UNPACK_BODY)
   {
     //SFrameBSInfo * info  = (SFrameBSInfo *)videoMsg->GetPackFragmentPointer(2); //Here the m_Frame point is receive, the m_FrameHeader is at index 1, we need to check what information we need to put into the image header.
@@ -307,15 +296,19 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
     SBufferInfo bufInfo;
     memset (&bufInfo, 0, sizeof (SBufferInfo));
     int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
+    if (RGBFrame)
+      delete [] RGBFrame;
+      RGBFrame = NULL;
     RGBFrame = new uint8_t[iHeight*iWidth*3];
     uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
     H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
     bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
+    delete [] YUV420Frame;
+    YUV420Frame = NULL;
     return RGBFrame;
   }
-
   return NULL;
-
+  
 }
 
 int vtkIGTLToMRMLVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth)
@@ -328,7 +321,7 @@ int vtkIGTLToMRMLVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV42
   uint8_t *dstY = YUV444;
   uint8_t *dstU = dstY + componentLength;
   uint8_t *dstV = dstU + componentLength;
-
+  
   memcpy(dstY, srcY, componentLength);
   int y;
 #pragma omp parallel for default(none) shared(dstV,dstU,srcV,srcU)
@@ -377,6 +370,11 @@ int vtkIGTLToMRMLVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV42
     RGBFrame[3*i+1] = clip_buf[G_tmp];
     RGBFrame[3*i+2] = clip_buf[B_tmp];
   }
+  delete [] YUV444;
+  YUV444 = NULL;
+  dstY = NULL;
+  dstU = NULL;
+  dstV = NULL;
   return 1;
 }
 
@@ -395,9 +393,9 @@ int vtkIGTLToMRMLVideo::MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, i
       if (qnode->GetQueryType() == vtkMRMLIGTLQueryNode::TYPE_START)
       {
         if (this->StartVideoMsg.IsNull())
-          {
+        {
           this->StartVideoMsg = igtl::StartVideoDataMessage::New();
-          }
+        }
         this->StartVideoMsg->SetDeviceName(qnode->GetIGTLDeviceName());
         this->StartVideoMsg->SetResolution(this->interval);
         this->StartVideoMsg->Pack();
@@ -437,5 +435,5 @@ int vtkIGTLToMRMLVideo::IGTLToVTKScalarType(int igtlType)
     default:
       vtkErrorMacro ("Invalid IGTL scalar Type: "<<igtlType);
       return VTK_VOID;
-    }
+  }
 }

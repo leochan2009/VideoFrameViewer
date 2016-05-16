@@ -19,17 +19,17 @@
      <property name="title">
       <string/>
      </property>
-     <widget class="QGraphicsView" name="graphicsView">
+     <widget class="SlicerVideoWidget" name="graphicsView">
       <property name="geometry">
        <rect>
         <x>130</x>
         <y>180</y>
-        <width>381</width>
-        <height>391</height>
+        <width>1280</width>
+        <height>720</height>
        </rect>
       </property>
      </widget>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
         <x>200</x>
@@ -203,6 +203,12 @@
    <class>qMRMLNodeComboBox</class>
    <extends>QWidget</extends>
    <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
+  <customwidget>
+  <class>SlicerVideoWidget</class>
+  <extends>QWidget</extends>
+  <header>Widgets/SlicerVideoWidget.h</header>
+  <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -20,6 +20,7 @@
 
 // SlicerQt includes
 #include "qSlicerAbstractModuleWidget.h"
+#include "Widgets/SlicerVideoWidget.h"
 
 // CTK includes
 #include <ctkVTKObject.h>
@@ -32,7 +33,6 @@ class vtkMRMLIGTLQueryNode;
 class vtkMRMLNode;
 class vtkMRMLScene;
 class vtkObject;
-
 
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
@@ -58,6 +58,7 @@ public slots:
   void setMRMLIGTLConnectorNode(vtkMRMLNode* node);
   
   void importDataAndEvents();
+  
   
 protected slots:
   /// Internal function to update the widgets based on the IGTLConnector node

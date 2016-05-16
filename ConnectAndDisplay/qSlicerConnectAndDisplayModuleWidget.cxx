@@ -20,6 +20,7 @@
 // Qt includes
 #include <QButtonGroup>
 #include <QTimer>
+#include <QPointer>
 
 // SlicerQt includes
 #include "qSlicerConnectAndDisplayModuleWidget.h"
@@ -49,6 +50,8 @@ public:
   vtkIGTLToMRMLVideo* converter;
   QTimer ImportDataAndEventsTimer;
   vtkSlicerConnectAndDisplayLogic * logic();
+  uint8_t * RGBFrame;
+
 };
 
 //-----------------------------------------------------------------------------
@@ -59,6 +62,7 @@ qSlicerConnectAndDisplayModuleWidgetPrivate::qSlicerConnectAndDisplayModuleWidge
 {
   this->IGTLConnectorNode = NULL;
   this->IGTLDataQueryNode = NULL;
+  RGBFrame = new uint8_t[1280*720*3];
 }
 
 
@@ -252,34 +256,18 @@ void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
   vtkSlicerConnectAndDisplayLogic * igtlLogic = vtkSlicerConnectAndDisplayLogic::SafeDownCast(l);
   if (igtlLogic)
   {
-    uint8_t* RGBFrame = NULL;
-    RGBFrame = igtlLogic->CallConnectorTimerHander();
+    uint8_t *frame = igtlLogic->CallConnectorTimerHander();
     //-------------------
-    int p_width = 1280, p_height = 720;
-    //int sizeInMB = (p_width*p_height) >> 20;  //RGBFrame size should be acquired from somewhere
-    
     // Convert the image in p_PixmapConversionBuffer to a QPixmap
-    QImage tmpImage(RGBFrame, p_width,p_height,p_width*3, QImage::Format_RGB888);
-    if (RGBFrame)
+    if (frame)
     {
-      QPixmap* cachedFrame = new QPixmap();
-      cachedFrame->convertFromImage(tmpImage);
-      QGraphicsScene *scn = new QGraphicsScene( d->graphicsView );
-      scn->setSceneRect( d->graphicsView->rect() );
-      d->graphicsView->setScene( scn );
-      d->graphicsView->setFixedSize( p_width, p_height );
-      d->graphicsView->rect().setWidth(p_width);
-      d->graphicsView->rect().setHeight(p_height);
-      scn->addPixmap(*cachedFrame);
-      d->graphicsView->show();
-      delete cachedFrame;
-      /*d->graphicsView->rect().setWidth(p_width);
-      d->graphicsView->rect().setHeight(p_height);
-      QPainter painter(d->graphicsView);
-      QPixmap cachedFrame = QPixmap();
-      cachedFrame.convertFromImage(tmpImage);
-      painter.drawPixmap(d->graphicsView->rect(), cachedFrame, cachedFrame.rect());
-      d->graphicsView->show();*/
+      memcpy(d->RGBFrame, frame, 1280*720*3);
+      d->graphicsView->setRGBFrame(d->RGBFrame);
+      d->graphicsView->update();
+    }
+    else{
+      d->graphicsView->setRGBFrame(NULL);
     }
   }
 }
+
