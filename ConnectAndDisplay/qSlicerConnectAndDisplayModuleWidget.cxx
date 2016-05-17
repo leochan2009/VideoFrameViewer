@@ -88,6 +88,8 @@ qSlicerConnectAndDisplayModuleWidget::qSlicerConnectAndDisplayModuleWidget(QWidg
           this, SLOT(importDataAndEvents()));
   QObject::connect(d->ConnectorPortEdit, SIGNAL(editingFinished()),
                    this, SLOT(updateIGTLConnectorNode()));
+  QObject::connect(d->ConnectorHostAddressEdit, SIGNAL(editingFinished()),
+                   this, SLOT(updateIGTLConnectorNode()));
   QObject::connect(d->ConnectorStateCheckBox, SIGNAL(toggled(bool)),
                    this, SLOT(startCurrentIGTLConnector(bool)));
   QObject::connect(d->StartVideoCheckBox, SIGNAL(toggled(bool)),
@@ -178,7 +180,7 @@ void qSlicerConnectAndDisplayModuleWidget::startCurrentIGTLConnector(bool value)
   Q_ASSERT(d->IGTLConnectorNode);
   if (value)
   {
-    d->IGTLConnectorNode->SetTypeClient("localhost", d->ConnectorPortEdit->text().toInt());
+    d->IGTLConnectorNode->SetTypeClient(d->ConnectorHostAddressEdit->text().toStdString(), d->ConnectorPortEdit->text().toInt());
     
     bool success = false;
     int attemptTimes = 0;
@@ -242,6 +244,7 @@ void qSlicerConnectAndDisplayModuleWidget::updateIGTLConnectorNode()
   if (d->IGTLConnectorNode != NULL)
   {
     d->IGTLConnectorNode->DisableModifiedEventOn();
+    d->IGTLConnectorNode->SetServerHostname(d->ConnectorHostAddressEdit->text().toStdString());
     d->IGTLConnectorNode->SetServerPort(d->ConnectorPortEdit->text().toInt());
     d->IGTLConnectorNode->DisableModifiedEventOff();
     d->IGTLConnectorNode->InvokePendingModifiedEvent();

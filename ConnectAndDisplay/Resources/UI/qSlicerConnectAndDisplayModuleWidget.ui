@@ -19,7 +19,7 @@
      <property name="title">
       <string/>
      </property>
-     <widget class="SlicerVideoWidget" name="graphicsView">
+     <widget class="SlicerVideoWidget" name="graphicsView" native="true">
       <property name="geometry">
        <rect>
         <x>130</x>
@@ -33,14 +33,40 @@
       <property name="geometry">
        <rect>
         <x>200</x>
-        <y>40</y>
-        <width>205</width>
+        <y>50</y>
+        <width>386</width>
         <height>121</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QLabel" name="ConnectorHostAddressLabel">
+           <property name="text">
+            <string>Host name:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="ConnectorHostAddressEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly</set>
+           </property>
+          </widget>
+         </item>
          <item>
           <widget class="QLabel" name="ConnectorPortLabel">
            <property name="text">
@@ -205,10 +231,10 @@
    <header>qMRMLNodeComboBox.h</header>
   </customwidget>
   <customwidget>
-  <class>SlicerVideoWidget</class>
-  <extends>QWidget</extends>
-  <header>Widgets/SlicerVideoWidget.h</header>
-  <container>1</container>
+   <class>SlicerVideoWidget</class>
+   <extends>QWidget</extends>
+   <header>Widgets/SlicerVideoWidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>
