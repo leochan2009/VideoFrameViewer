@@ -22,6 +22,7 @@
 // OpenIGTLink includes
 #include <igtlServerSocket.h>
 #include <igtlClientSocket.h>
+#include <igtlConditionVariable.h>
 
 // MRML includes
 #include <vtkMRML.h>
@@ -436,6 +437,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   int interval;
   
   bool conversionFinish;
+  igtl::ConditionVariable::Pointer conditionVar;
+  igtl::SimpleMutexLock *localMutex;
 
 };
 

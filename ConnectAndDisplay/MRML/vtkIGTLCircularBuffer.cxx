@@ -48,8 +48,6 @@ vtkIGTLCircularBuffer::vtkIGTLCircularBuffer()
 
   this->UpdateFlag = 0;
   this->Mutex->Unlock();
-  this->conditionVar = igtl::ConditionVariable::New();
-  this->localMutex = new igtl::SimpleMutexLock();
 }
 
 

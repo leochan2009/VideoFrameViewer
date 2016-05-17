@@ -78,6 +78,9 @@ vtkMRMLIGTLConnectorNode::vtkMRMLIGTLConnectorNode()
 {
   this->RGBFrame = new uint8_t[1280*720*3];
   this->conversionFinish = false;
+  this->conditionVar = igtl::ConditionVariable::New();
+  this->localMutex = new igtl::SimpleMutexLock();
+  
   this->HideFromEditors = false;
 
   this->Type   = TYPE_NOT_DEFINED;
@@ -919,7 +922,7 @@ int vtkMRMLIGTLConnectorNode::ReceiveController(vtkMRMLIGTLConnectorNode* igtlco
       circBuffer->EndPush();
       igtlcon->conversionFinish = false;
       while(!igtlcon->conversionFinish)
-        circBuffer->conditionVar->Wait(circBuffer->localMutex);
+        igtlcon->conditionVar->Wait(igtlcon->localMutex);
     }
     else
       {
@@ -1092,7 +1095,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             RGBFrame = converter->IGTLToMRML(buffer);
             if (RGBFrame)
               this->conversionFinish = true;
-            circBuffer->conditionVar->Signal();
+            this->conditionVar->Signal();
             std::cerr<<"conversion time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
           }
         else
@@ -1680,6 +1683,8 @@ void vtkMRMLIGTLConnectorNode::PushQuery(vtkMRMLIGTLQueryNode* node)
   node->SetConnectorNodeID(this->GetID());
   this->QueryWaitingQueue.push_back(node);
   this->QueryQueueMutex->Unlock();
+  this->conversionFinish = true;
+  this->conditionVar->Signal();
 }
 
 //---------------------------------------------------------------------------

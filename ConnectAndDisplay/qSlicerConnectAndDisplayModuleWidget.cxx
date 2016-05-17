@@ -259,7 +259,7 @@ void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
     uint8_t *frame = igtlLogic->CallConnectorTimerHander();
     //-------------------
     // Convert the image in p_PixmapConversionBuffer to a QPixmap
-    if (frame)
+    if (frame && d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
     {
       memcpy(d->RGBFrame, frame, 1280*720*3);
       d->graphicsView->setRGBFrame(d->RGBFrame);

@@ -20,7 +20,6 @@
 
 // OpenIGTLink includes
 #include <igtlMessageBase.h>
-#include <igtlConditionVariable.h>
 
 // OpenIGTLinkIF MRML includes
 #include "vtkSlicerConnectAndDisplayModuleMRMLExport.h"
@@ -35,8 +34,6 @@ class vtkMutexLock;
 class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLCircularBuffer : public vtkObject
 {
  public:
-  igtl::ConditionVariable::Pointer conditionVar;
-  igtl::SimpleMutexLock *localMutex;
   static vtkIGTLCircularBuffer *New();
   vtkTypeMacro(vtkIGTLCircularBuffer,vtkObject);
 
