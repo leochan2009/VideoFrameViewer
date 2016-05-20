@@ -51,6 +51,7 @@ public:
   QTimer ImportDataAndEventsTimer;
   vtkSlicerConnectAndDisplayLogic * logic();
   uint8_t * RGBFrame;
+  SlicerVideoGLWidget *openGL;
 
 };
 
@@ -63,6 +64,8 @@ qSlicerConnectAndDisplayModuleWidgetPrivate::qSlicerConnectAndDisplayModuleWidge
   this->IGTLConnectorNode = NULL;
   this->IGTLDataQueryNode = NULL;
   RGBFrame = new uint8_t[1280*720*3];
+  openGL = new SlicerVideoGLWidget(q_ptr);
+  openGL->setGeometry(QRect(131, 181, 1, 1));
 }
 
 
@@ -225,6 +228,7 @@ void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
       d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_START);
       d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
       d->IGTLConnectorNode->setInterval(interval);
+      d->IGTLConnectorNode->setUseCompress(d->UseCompressCheckBox->isChecked());
       d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
     }
   }
@@ -259,6 +263,7 @@ void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
   vtkSlicerConnectAndDisplayLogic * igtlLogic = vtkSlicerConnectAndDisplayLogic::SafeDownCast(l);
   if (igtlLogic)
   {
+    int64_t startTime = Connector::getTime();
     uint8_t *frame = igtlLogic->CallConnectorTimerHander();
     //-------------------
     // Convert the image in p_PixmapConversionBuffer to a QPixmap
@@ -267,9 +272,13 @@ void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
       memcpy(d->RGBFrame, frame, 1280*720*3);
       d->graphicsView->setRGBFrame(d->RGBFrame);
       d->graphicsView->update();
+      d->openGL->setRGBFrame(d->RGBFrame);
+      d->openGL->update();
+      std::cerr<<"CallConnectorTimerHander Time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
     }
     else{
       d->graphicsView->setRGBFrame(NULL);
+      //d->openGL->setRGBFrame(NULL);
     }
   }
 }

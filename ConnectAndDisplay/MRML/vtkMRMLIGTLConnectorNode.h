@@ -324,6 +324,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
 
   
   virtual void setInterval (int timeInterva){interval = timeInterva;};
+  virtual void setUseCompress (int useComp){useCompress = useComp;};
 
  protected:
 
@@ -435,6 +436,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   uint8_t* RGBFrame;
   
   int interval;
+  
+  bool useCompress;
   
   bool conversionFinish;
   igtl::ConditionVariable::Pointer conditionVar;

@@ -106,6 +106,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
 
   vtkGetMacro( CheckCRC, int );
   vtkSetMacro( CheckCRC, int );
+  
 
   // Set/Get pointer to OpenIGTlinkIFLogic 
   void SetConnectAndDisplayLogic(vtkSlicerConnectAndDisplayLogic* logic);
@@ -119,6 +120,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
                              vtkMRMLScene * vtkNotUsed(scene),
                              vtkMRMLNode * vtkNotUsed(node)) {};
   virtual void setInterval(int timeInterval){interval = timeInterval;};
+  virtual void setUseCompress(bool useCompress){UseCompress = useCompress;};
+  
  protected:
   vtkIGTLToMRMLBase();
   ~vtkIGTLToMRMLBase();
@@ -131,6 +134,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
   int CheckCRC;
   
   int interval;
+  bool UseCompress;
 
   vtkIGTLToMRMLBasePrivate* Private;
 };

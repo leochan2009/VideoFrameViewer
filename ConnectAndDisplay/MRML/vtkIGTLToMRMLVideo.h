@@ -50,6 +50,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
   int YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth);
   
   virtual void setInterval(int timeInterval) {interval = timeInterval;};
+  virtual void setUseCompress(bool useCompress){_useCompress = useCompress;};
 
  protected:
   vtkIGTLToMRMLVideo();
@@ -64,6 +65,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLVideo : publi
   ISVCDecoder* decoder_;
   char*  IGTLName;
   int interval;
+  bool _useCompress;
   igtl::StartVideoDataMessage::Pointer StartVideoMsg;
   igtl::StopVideoMessage::Pointer StopVideoMsg;
   uint8_t* pData[3];

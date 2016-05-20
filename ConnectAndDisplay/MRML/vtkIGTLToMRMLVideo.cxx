@@ -43,6 +43,7 @@
 #include <vtksys/SystemTools.hxx>
 
 #include "vtkSlicerConnectAndDisplayLogic.h"
+#include <omp.h>
 
 #define NO_DELAY_DECODING
 
@@ -60,32 +61,32 @@ void ComposeByteSteam(uint8_t** inputData, SBufferInfo bufInfo, uint8_t *outputB
   int iHeight = bufInfo.UsrData.sSystemBuffer.iHeight ;
   int iWidth = bufInfo.UsrData.sSystemBuffer.iWidth ;
   int iStride [2] = {bufInfo.UsrData.sSystemBuffer.iStride[0],bufInfo.UsrData.sSystemBuffer.iStride[1]};
-  uint8_t* pPtr = inputData[0];
+#pragma omp parallel for default(none) shared(outputByteStream,inputData, iStride, iHeight, iWidth)
   for (int i = 0; i < iHeight; i++)
   {
+    uint8_t* pPtr = inputData[0]+i*iStride[0];
     for (int j = 0; j < iWidth; j++)
     {
       outputByteStream[i*iWidth + j] = pPtr[j];
     }
-    pPtr += iStride[0];
   }
-  pPtr = inputData[1];
+#pragma omp parallel for default(none) shared(outputByteStream,inputData, iStride, iHeight, iWidth)
   for (int i = 0; i < iHeight/2; i++)
   {
+    uint8_t* pPtr = inputData[1]+i*iStride[1];
     for (int j = 0; j < iWidth/2; j++)
     {
       outputByteStream[i*iWidth/2 + j + iHeight*iWidth] = pPtr[j];
     }
-    pPtr += iStride[1];
   }
-  pPtr = inputData[2];
+#pragma omp parallel for default(none) shared(outputByteStream, inputData, iStride, iHeight, iWidth)
   for (int i = 0; i < iHeight/2; i++)
   {
+    uint8_t* pPtr = inputData[2]+i*iStride[1];
     for (int j = 0; j < iWidth/2; j++)
     {
       outputByteStream[i*iWidth/2 + j + iHeight*iWidth*5/4] = pPtr[j];
     }
-    pPtr += iStride[1];
   }
   
 }
@@ -167,8 +168,11 @@ void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH26
     //~end for
     
     iStart = getTime();
+    delete [] pData[0];
     pData[0] = NULL;
+    delete [] pData[1];
     pData[1] = NULL;
+    delete [] pData[2];
     pData[2] = NULL;
     uiTimeStamp ++;
     memset (&sDstBufInfo, 0, sizeof (SBufferInfo));
@@ -187,10 +191,12 @@ void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH26
     memset (&sDstBufInfo, 0, sizeof (SBufferInfo));
     sDstBufInfo.uiInBsTimeStamp = uiTimeStamp;
     pDecoder->DecodeFrame2 (NULL, 0, pData, &sDstBufInfo);
-    iEnd    = getTime();
+    iEnd  = getTime();
     iTotal = iEnd - iStart;
     if (sDstBufInfo.iBufferStatus == 1) {
+      int64_t iStart2 = getTime();
       ComposeByteSteam(pData, sDstBufInfo, outputByteStream);
+      fprintf (stderr, "compose time:\t%f\n", (getTime()-iStart2)/1e6);
       ++ iFrameCount;
     }
 #endif
@@ -301,8 +307,17 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
       RGBFrame = NULL;
     RGBFrame = new uint8_t[iHeight*iWidth*3];
     uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
-    H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+    if (_useCompress)
+    {
+      H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+    }
+    else
+    {
+      memcpy(YUV420Frame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight*3/2);
+    }
+    int64_t iStart = getTime();
     bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
+    fprintf (stderr, "compose time:\t%f\n", (getTime()-iStart)/1e6);
     delete [] YUV420Frame;
     YUV420Frame = NULL;
     return RGBFrame;
@@ -323,10 +338,12 @@ int vtkIGTLToMRMLVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV42
   uint8_t *dstV = dstU + componentLength;
   
   memcpy(dstY, srcY, componentLength);
-  int y;
-#pragma omp parallel for default(none) shared(dstV,dstU,srcV,srcU)
-  for (y = 0; y < iHeight/2; y++) {
-    for (int x = 0; x < iWidth/2; x++) {
+  const int halfHeight = iHeight/2;
+  const int halfWidth = iWidth/2;
+
+#pragma omp parallel for default(none) shared(dstV,dstU,srcV,srcU,iWidth)
+  for (int y = 0; y < halfHeight; y++) {
+    for (int x = 0; x < halfWidth; x++) {
       dstU[2 * x + 2 * y*iWidth] = dstU[2 * x + 1 + 2 * y*iWidth] = srcU[x + y*iWidth/2];
       dstV[2 * x + 2 * y*iWidth] = dstV[2 * x + 1 + 2 * y*iWidth] = srcV[x + y*iWidth/2];
     }
@@ -349,15 +366,15 @@ int vtkIGTLToMRMLVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV42
   
   // initialize clipping table
   memset(clp_buf, 0, 384);
-  int i;
-  for (i = 0; i < 256; i++) {
+  
+  for (int i = 0; i < 256; i++) {
     clp_buf[384+i] = i;
   }
   memset(clp_buf+384+256, 255, 384);
   
   
-#pragma omp parallel for default(none) private(i) shared(srcY,srcU,srcV,dstMem,yMult,rvMult,guMult,gvMult,buMult,clip_buf,componentLength)// num_threads(2)
-  for (i = 0; i < componentLength; ++i) {
+#pragma omp parallel for default(none) shared(dstY,dstU,dstV,RGBFrame,yMult,rvMult,guMult,gvMult,buMult,clip_buf,componentLength)// num_threads(2)
+  for (int i = 0; i < componentLength; ++i) {
     const int Y_tmp = ((int)dstY[i] - yOffset) * yMult;
     const int U_tmp = (int)dstU[i] - cZero;
     const int V_tmp = (int)dstV[i] - cZero;
@@ -398,6 +415,7 @@ int vtkIGTLToMRMLVideo::MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, i
         }
         this->StartVideoMsg->SetDeviceName(qnode->GetIGTLDeviceName());
         this->StartVideoMsg->SetResolution(this->interval);
+        this->StartVideoMsg->SetUseCompress(this->_useCompress);
         this->StartVideoMsg->Pack();
         *size = this->StartVideoMsg->GetPackSize();
         *igtlMsg = this->StartVideoMsg->GetPackPointer();
