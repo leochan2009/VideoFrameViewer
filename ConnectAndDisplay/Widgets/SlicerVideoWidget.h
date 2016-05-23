@@ -119,7 +119,8 @@ public:
   void paintEvent(QPaintEvent *) {
     if (this->RGBFrame)
     {
-      QPainter p(this);
+      QPainter p;
+      p.begin(this);
       int p_width = 1280, p_height = 720;
       int64_t iStart = getTheTime();
       screen_image_ = QImage(this->RGBFrame, p_width,p_height,p_width*3, QImage::Format_RGB888);
@@ -127,6 +128,7 @@ public:
       p.save();
       p.drawImage(this->rect(),screen_image_,screen_image_.rect()); // drawPixMap under OpenGL environment has bug https://bugreports.qt.io/browse/QTBUG-13814
       p.restore();
+      p.end();
       int64_t iEnd = getTheTime();
       std::cerr<<"Diplay time Total: "<<(iEnd-iStart)/1e6<<std::endl;
       

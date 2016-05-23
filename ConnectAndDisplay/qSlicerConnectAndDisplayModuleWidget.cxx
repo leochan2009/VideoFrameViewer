@@ -26,6 +26,16 @@
 #include "qSlicerConnectAndDisplayModuleWidget.h"
 #include "ui_qSlicerConnectAndDisplayModuleWidget.h"
 
+// SlicerQt includes
+#include "qSlicerApplication.h"
+#include "qSlicerLayoutManager.h"
+#include "qSlicerWidget.h"
+
+// qMRMLWidget includes
+#include "qMRMLThreeDView.h"
+#include "qMRMLThreeDWidget.h"
+#include "qMRMLSliderWidget.h"
+
 // Logic include
 #include "vtkSlicerConnectAndDisplayLogic.h"
 
@@ -52,6 +62,12 @@ public:
   vtkSlicerConnectAndDisplayLogic * logic();
   uint8_t * RGBFrame;
   SlicerVideoGLWidget *openGL;
+  
+  vtkRenderer* activeRenderer;
+  vtkRenderer*   BackgroundRenderer;
+  vtkImageActor* BackgroundActor;
+  vtkImageData* imageData ;
+
 
 };
 
@@ -65,7 +81,9 @@ qSlicerConnectAndDisplayModuleWidgetPrivate::qSlicerConnectAndDisplayModuleWidge
   this->IGTLDataQueryNode = NULL;
   RGBFrame = new uint8_t[1280*720*3];
   openGL = new SlicerVideoGLWidget(q_ptr);
-  openGL->setGeometry(QRect(131, 181, 1, 1));
+  openGL->setGeometry(QRect(130, 180, 1280, 720));
+  //uint8_t *RGBFrame = new uint8_t[1];
+  //openGL->setRGBFrame(RGBFrame);
 }
 
 
@@ -97,6 +115,42 @@ qSlicerConnectAndDisplayModuleWidget::qSlicerConnectAndDisplayModuleWidget(QWidg
                    this, SLOT(startCurrentIGTLConnector(bool)));
   QObject::connect(d->StartVideoCheckBox, SIGNAL(toggled(bool)),
                    this, SLOT(startVideoTransmission(bool)));
+  
+  qSlicerApplication *  app = qSlicerApplication::application();
+  qMRMLThreeDView* threeDView = app->layoutManager()->threeDWidget(0)->threeDView();
+  vtkRenderer* activeRenderer = app->layoutManager()->activeThreeDRenderer();
+  vtkRenderWindow* activeRenderWindow = activeRenderer->GetRenderWindow();
+  d->imageData = vtkImageData::New();
+  d->imageData->SetDimensions(1280, 720, 1);
+  d->imageData->SetExtent(0, 1279,0, 719, 0, 0);
+  d->imageData->SetSpacing(1.0, 1.0, 1.0);
+  d->imageData->SetOrigin(0.0, 0.0, 0.0);
+  vtkInformation* meta_data = vtkInformation::New();
+  d->imageData->SetNumberOfScalarComponents(3, meta_data);
+  //d->imageData->SetScalarTypeToUnsignedChar();
+  d->imageData->AllocateScalars(VTK_UNSIGNED_CHAR,3);
+  activeRenderer->SetLayer(1);
+  if (activeRenderer)
+  {
+    
+    d->BackgroundActor = vtkImageActor::New();
+    d->BackgroundActor->SetInputData(d->imageData);
+    
+    d->BackgroundRenderer = vtkRenderer::New();
+    d->BackgroundRenderer->InteractiveOff();
+    d->BackgroundRenderer->SetLayer(0);
+    d->BackgroundRenderer->AddActor(d->BackgroundActor);
+    
+    d->BackgroundRenderer->GradientBackgroundOff();
+    d->BackgroundRenderer->SetBackground(0,0,0);
+    
+    d->BackgroundActor->Modified();
+    
+    activeRenderWindow->AddRenderer(d->BackgroundRenderer);
+    //BackgroundRenderer->GetActiveCamera();
+    activeRenderWindow->Render();
+    
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -275,10 +329,12 @@ void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
       d->openGL->setRGBFrame(d->RGBFrame);
       d->openGL->update();
       std::cerr<<"CallConnectorTimerHander Time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
+      memcpy((void*)d->imageData->GetScalarPointer(), (void*)d->RGBFrame, 1280*720*3);
+      d->imageData->Modified();
+      d->BackgroundRenderer->GetRenderWindow()->Render();
     }
     else{
       d->graphicsView->setRGBFrame(NULL);
-      //d->openGL->setRGBFrame(NULL);
     }
   }
 }

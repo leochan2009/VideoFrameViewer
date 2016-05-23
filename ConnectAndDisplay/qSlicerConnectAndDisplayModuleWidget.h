@@ -25,6 +25,19 @@
 // CTK includes
 #include <ctkVTKObject.h>
 
+// VTK includes
+#include <vtkSmartPointer.h>
+#include "vtkRenderer.h"
+#include <vtkSmartPointer.h>
+#include "vtkImageData.h"
+#include "vtkImageActor.h"
+#include "vtkRenderer.h"
+#include "vtkActor.h"
+#include "vtkImageActor.h"
+#include "vtkInformation.h"
+#include <vtkRenderWindow.h>
+
+
 #include "qSlicerConnectAndDisplayModuleExport.h"
 
 class qSlicerConnectAndDisplayModuleWidgetPrivate;

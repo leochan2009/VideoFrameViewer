@@ -1093,10 +1093,10 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             int64_t startTime = Connector::getTime();
             this->conversionFinish = false;
             RGBFrame = converter->IGTLToMRML(buffer);
+            std::cerr<<"IGTL TO MRML time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
             if (RGBFrame)
               this->conversionFinish = true;
             this->conditionVar->Signal();
-            std::cerr<<"conversion time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
           }
         else
           {

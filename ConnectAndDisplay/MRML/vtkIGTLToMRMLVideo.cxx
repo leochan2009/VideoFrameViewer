@@ -101,6 +101,7 @@ void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH26
   uint8_t* pBuf = NULL;
   uint8_t uiStartCode[4] = {0, 0, 0, 1};
   
+  iStart = getTime();
   pData[0] = NULL;
   pData[1] = NULL;
   pData[2] = NULL;
@@ -150,23 +151,6 @@ void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH26
       continue;
     }
     
-    //for coverage test purpose
-    int32_t iEndOfStreamFlag;
-    pDecoder->GetOption (DECODER_OPTION_END_OF_STREAM, &iEndOfStreamFlag);
-    int32_t iCurIdrPicId;
-    pDecoder->GetOption (DECODER_OPTION_IDR_PIC_ID, &iCurIdrPicId);
-    int32_t iFrameNum;
-    pDecoder->GetOption (DECODER_OPTION_FRAME_NUM, &iFrameNum);
-    int32_t bCurAuContainLtrMarkSeFlag;
-    pDecoder->GetOption (DECODER_OPTION_LTR_MARKING_FLAG, &bCurAuContainLtrMarkSeFlag);
-    int32_t iFrameNumOfAuMarkedLtr;
-    pDecoder->GetOption (DECODER_OPTION_LTR_MARKED_FRAME_NUM, &iFrameNumOfAuMarkedLtr);
-    int32_t iFeedbackVclNalInAu;
-    pDecoder->GetOption (DECODER_OPTION_VCL_NAL, &iFeedbackVclNalInAu);
-    int32_t iFeedbackTidInAu;
-    pDecoder->GetOption (DECODER_OPTION_TEMPORAL_ID, &iFeedbackTidInAu);
-    //~end for
-    
     iStart = getTime();
     delete [] pData[0];
     pData[0] = NULL;
@@ -184,18 +168,20 @@ void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH26
 #endif
     
 #ifdef NO_DELAY_DECODING
-    iStart = getTime();
+    
     pData[0] = NULL;
     pData[1] = NULL;
     pData[2] = NULL;
     memset (&sDstBufInfo, 0, sizeof (SBufferInfo));
     sDstBufInfo.uiInBsTimeStamp = uiTimeStamp;
     pDecoder->DecodeFrame2 (NULL, 0, pData, &sDstBufInfo);
+    fprintf (stderr, "iStreamSize:\t%d \t slice size:\t%d\n", iStreamSize, iSliceSize);
     iEnd  = getTime();
     iTotal = iEnd - iStart;
     if (sDstBufInfo.iBufferStatus == 1) {
       int64_t iStart2 = getTime();
       ComposeByteSteam(pData, sDstBufInfo, outputByteStream);
+      
       fprintf (stderr, "compose time:\t%f\n", (getTime()-iStart2)/1e6);
       ++ iFrameCount;
     }
@@ -288,6 +274,7 @@ vtkMRMLNode* vtkIGTLToMRMLVideo::CreateNewNodeWithMessage(vtkMRMLScene* scene, c
 //---------------------------------------------------------------------------
 uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
 {
+  int64_t iStart = getTime();
   igtl::VideoMessage::Pointer videoMsg;
   videoMsg = igtl::VideoMessage::New();
   videoMsg->AllocatePack(buffer->GetBodySizeToRead());
@@ -295,6 +282,8 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
   // Deserialize the transform data
   // If you want to skip CRC check, call Unpack() without argument.
   videoMsg->Unpack();
+  fprintf (stderr, "Message unpack time:\t%f\n", (getTime()-iStart)/1e6);
+  iStart = getTime();
   if (igtl::MessageHeader::UNPACK_BODY)
   {
     //SFrameBSInfo * info  = (SFrameBSInfo *)videoMsg->GetPackFragmentPointer(2); //Here the m_Frame point is receive, the m_FrameHeader is at index 1, we need to check what information we need to put into the image header.
@@ -315,9 +304,10 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
     {
       memcpy(YUV420Frame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight*3/2);
     }
-    int64_t iStart = getTime();
+    fprintf (stderr, "decode total time:\t%f\n", (getTime()-iStart)/1e6);
+    iStart = getTime();
     bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
-    fprintf (stderr, "compose time:\t%f\n", (getTime()-iStart)/1e6);
+    fprintf (stderr, "YUV420ToRGBConversion: \t%f\n", (getTime()-iStart)/1e6);
     delete [] YUV420Frame;
     YUV420Frame = NULL;
     return RGBFrame;
