@@ -693,7 +693,7 @@ void* vtkMRMLIGTLConnectorNode::ThreadFunction(void* ptr)
       igtlcon->RequestInvokeEvent(vtkMRMLIGTLConnectorNode::ConnectedEvent);
       //vtkErrorMacro("vtkOpenIGTLinkIFLogic::ThreadFunction(): Client Connected.");
       igtlcon->RequestPushOutgoingMessages();
-      igtlcon->ReceiveController(igtlcon);
+      igtlcon->ReceiveController();
       igtlcon->State = STATE_WAIT_CONNECTION;
       igtlcon->RequestInvokeEvent(vtkMRMLIGTLConnectorNode::DisconnectedEvent); // need to Request the InvokeEvent, because we are not on the main thread now
       }
@@ -790,7 +790,7 @@ int vtkMRMLIGTLConnectorNode::WaitForConnection()
 
 
 //----------------------------------------------------------------------------
-int vtkMRMLIGTLConnectorNode::ReceiveController(vtkMRMLIGTLConnectorNode* igtlcon)
+int vtkMRMLIGTLConnectorNode::ReceiveController()
 {
   //igtl_header header;
   igtl::MessageHeader::Pointer headerMsg;
@@ -920,9 +920,11 @@ int vtkMRMLIGTLConnectorNode::ReceiveController(vtkMRMLIGTLConnectorNode* igtlco
         continue;
         }
       circBuffer->EndPush();
-      igtlcon->conversionFinish = false;
-      while(!igtlcon->conversionFinish)
-        igtlcon->conditionVar->Wait(igtlcon->localMutex);
+      this->localMutex->Lock();
+      this->conversionFinish = false;
+      while(!this->conversionFinish)
+        this->conditionVar->Wait(this->localMutex);
+      this->localMutex->Unlock();
     }
     else
       {
@@ -990,7 +992,7 @@ unsigned int vtkMRMLIGTLConnectorNode::GetUpdatedBuffersList(NameListType& nameL
   CircularBufferMap::iterator iter;
   for (iter = this->Buffer.begin(); iter != this->Buffer.end(); iter ++)
     {
-    if (iter->second != NULL && iter->second->IsUpdated())
+    if (iter->second != NULL && this->conversionFinish == false)
       {
       nameList.push_back(iter->first);
       }
@@ -1020,6 +1022,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
   vtkMRMLIGTLConnectorNode::NameListType nameList;
   GetUpdatedBuffersList(nameList);
   vtkMRMLIGTLConnectorNode::NameListType::iterator nameIter;
+  RGBFrame = NULL;
   for (nameIter = nameList.begin(); nameIter != nameList.end(); nameIter ++)
   {
     vtkIGTLCircularBuffer* circBuffer = GetCircularBuffer(*nameIter);
@@ -1091,11 +1094,11 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
           {
             // Call the advanced creation call first to see if the requested converter needs the message itself
             int64_t startTime = Connector::getTime();
-            this->conversionFinish = false;
+            //this->conversionFinish = false;
             RGBFrame = converter->IGTLToMRML(buffer);
             std::cerr<<"IGTL TO MRML time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
-            if (RGBFrame)
-              this->conversionFinish = true;
+          
+            this->conversionFinish = true;
             this->conditionVar->Signal();
           }
         else
@@ -1197,9 +1200,9 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
     (*iter)->SetQueryStatus(vtkMRMLIGTLQueryNode::STATUS_EXPIRED);
     (*iter)->InvokeEvent(vtkMRMLIGTLQueryNode::ResponseEvent);
     }
-  if (this->conversionFinish)
-    return RGBFrame;
-  return NULL;
+  //if (this->conversionFinish)
+  return RGBFrame;
+  //return NULL;
 }
 
 //---------------------------------------------------------------------------

@@ -1,19 +1,19 @@
 /*==============================================================================
-
-  Program: 3D Slicer
-
-  Portions (c) Copyright Brigham and Women's Hospital (BWH) All Rights Reserved.
-
-  See COPYRIGHT.txt
-  or http://www.slicer.org/copyright/copyright.txt for details.
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-
-==============================================================================*/
+ 
+ Program: 3D Slicer
+ 
+ Portions (c) Copyright Brigham and Women's Hospital (BWH) All Rights Reserved.
+ 
+ See COPYRIGHT.txt
+ or http://www.slicer.org/copyright/copyright.txt for details.
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ 
+ ==============================================================================*/
 
 // Qt includes
 #include <QDebug>
@@ -23,8 +23,8 @@
 #include <QPointer>
 
 // SlicerQt includes
-#include "qSlicerConnectAndDisplayModuleWidget.h"
-#include "ui_qSlicerConnectAndDisplayModuleWidget.h"
+#include "qSlicerPolyDataCompressedTransmissionModuleWidget.h"
+#include "ui_qSlicerPolyDataCompressedTransmissionModuleWidget.h"
 
 // SlicerQt includes
 #include "qSlicerApplication.h"
@@ -37,43 +37,50 @@
 #include "qMRMLSliderWidget.h"
 
 // Logic include
-#include "vtkSlicerConnectAndDisplayLogic.h"
+#include "vtkSlicerPolyDataCompressedTransmissionLogic.h"
 
 // OpenIGTLinkIF MRML includes
 #include "vtkMRMLIGTLConnectorNode.h"
 #include "vtkIGTLToMRMLVideo.h"
 #include "vtkMRMLIGTLQueryNode.h"
 #include <qMRMLNodeFactory.h>
+
+//VTK include
 #include <vtkNew.h>
+#include <vtkPolyData.h>
+#include <vtkPoints.h>
+#include <vtkPointData.h>
+#include <vtkCellArray.h>
+#include <vtkSmartPointer.h>
+#include <vtkPolyDataMapper.h>
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class qSlicerConnectAndDisplayModuleWidgetPrivate: public Ui_qSlicerConnectAndDisplayModuleWidget
+class qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate: public Ui_qSlicerPolyDataCompressedTransmissionModuleWidget
 {
-  Q_DECLARE_PUBLIC(qSlicerConnectAndDisplayModuleWidget);
+  Q_DECLARE_PUBLIC(qSlicerPolyDataCompressedTransmissionModuleWidget);
 protected:
-  qSlicerConnectAndDisplayModuleWidget* const q_ptr;
+  qSlicerPolyDataCompressedTransmissionModuleWidget* const q_ptr;
 public:
-  qSlicerConnectAndDisplayModuleWidgetPrivate(qSlicerConnectAndDisplayModuleWidget& object);
+  qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate(qSlicerPolyDataCompressedTransmissionModuleWidget& object);
   
   vtkMRMLIGTLConnectorNode * IGTLConnectorNode;
   vtkMRMLIGTLQueryNode * IGTLDataQueryNode;
   vtkIGTLToMRMLVideo* converter;
   QTimer ImportDataAndEventsTimer;
-  vtkSlicerConnectAndDisplayLogic * logic();
+  vtkSlicerPolyDataCompressedTransmissionLogic * logic();
   
   vtkRenderer* activeRenderer;
-  vtkRenderer*   BackgroundRenderer;
-  vtkImageActor* BackgroundActor;
-  vtkImageData* imageData ;
-
-
+  vtkRenderer*   PolyDataRenderer;
+  vtkSmartPointer<vtkActor> PolyDataActor;
+  vtkSmartPointer<vtkPolyData> polydata;
+  vtkSmartPointer<vtkPolyDataMapper> mapper;
 };
 
 //-----------------------------------------------------------------------------
-// qSlicerConnectAndDisplayModuleWidgetPrivate methods
+// qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate methods
 
 //-----------------------------------------------------------------------------
-qSlicerConnectAndDisplayModuleWidgetPrivate::qSlicerConnectAndDisplayModuleWidgetPrivate(qSlicerConnectAndDisplayModuleWidget& object):q_ptr(&object)
+qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate::qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate(qSlicerPolyDataCompressedTransmissionModuleWidget& object):q_ptr(&object)
 {
   this->IGTLConnectorNode = NULL;
   this->IGTLDataQueryNode = NULL;
@@ -81,25 +88,25 @@ qSlicerConnectAndDisplayModuleWidgetPrivate::qSlicerConnectAndDisplayModuleWidge
 
 
 //-----------------------------------------------------------------------------
-vtkSlicerConnectAndDisplayLogic * qSlicerConnectAndDisplayModuleWidgetPrivate::logic()
+vtkSlicerPolyDataCompressedTransmissionLogic * qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate::logic()
 {
-  Q_Q(qSlicerConnectAndDisplayModuleWidget);
-  return vtkSlicerConnectAndDisplayLogic::SafeDownCast(q->logic());
+  Q_Q(qSlicerPolyDataCompressedTransmissionModuleWidget);
+  return vtkSlicerPolyDataCompressedTransmissionLogic::SafeDownCast(q->logic());
 }
 
 //-----------------------------------------------------------------------------
-// qSlicerConnectAndDisplayModuleWidget methods
+// qSlicerPolyDataCompressedTransmissionModuleWidget methods
 
 //-----------------------------------------------------------------------------
-qSlicerConnectAndDisplayModuleWidget::qSlicerConnectAndDisplayModuleWidget(QWidget* _parent)
-  : Superclass( _parent )
-  , d_ptr( new qSlicerConnectAndDisplayModuleWidgetPrivate(*this) )
+qSlicerPolyDataCompressedTransmissionModuleWidget::qSlicerPolyDataCompressedTransmissionModuleWidget(QWidget* _parent)
+: Superclass( _parent )
+, d_ptr( new qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate(*this) )
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   d->setupUi(this);
   this->Superclass::setup();
   QObject::connect(&d->ImportDataAndEventsTimer, SIGNAL(timeout()),
-          this, SLOT(importDataAndEvents()));
+                   this, SLOT(importDataAndEvents()));
   QObject::connect(d->ConnectorPortEdit, SIGNAL(editingFinished()),
                    this, SLOT(updateIGTLConnectorNode()));
   QObject::connect(d->ConnectorHostAddressEdit, SIGNAL(editingFinished()),
@@ -111,57 +118,34 @@ qSlicerConnectAndDisplayModuleWidget::qSlicerConnectAndDisplayModuleWidget(QWidg
   
   qSlicerApplication *  app = qSlicerApplication::application();
   vtkRenderer* activeRenderer = app->layoutManager()->activeThreeDRenderer();
+  d->PolyDataRenderer = activeRenderer;
   vtkRenderWindow* activeRenderWindow = activeRenderer->GetRenderWindow();
-  activeRenderWindow->SetSize(1280,720);
-  d->imageData = vtkImageData::New();
-  d->imageData->SetDimensions(1280, 720, 1);
-  d->imageData->SetExtent(0, 1279,0, 719, 0, 0);
-  d->imageData->SetSpacing(1.0, 1.0, 1.0);
-  d->imageData->SetOrigin(0.0, 0.0, 0.0);
-  vtkInformation* meta_data = vtkInformation::New();
-  d->imageData->SetNumberOfScalarComponents(3, meta_data);
-  //d->imageData->SetScalarTypeToUnsignedChar();
-  d->imageData->AllocateScalars(VTK_UNSIGNED_CHAR,3);
-  activeRenderer->SetLayer(1);
+  d->polydata = vtkSmartPointer<vtkPolyData>::New();
   if (activeRenderer)
   {
-    
-    d->BackgroundActor = vtkImageActor::New();
-    d->BackgroundActor->SetInputData(d->imageData);
-    
-    d->BackgroundRenderer = vtkRenderer::New();
-    d->BackgroundRenderer->InteractiveOff();
-    d->BackgroundRenderer->SetLayer(0);
-    d->BackgroundRenderer->AddActor(d->BackgroundActor);
-    
-    d->BackgroundRenderer->GradientBackgroundOff();
-    d->BackgroundRenderer->SetBackground(100,100,0);
-    
-    d->BackgroundActor->Modified();
-    
-    activeRenderWindow->AddRenderer(d->BackgroundRenderer);
-    //BackgroundRenderer->GetActiveCamera();
+    d->mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    d->mapper->SetInputData(d->polydata);
+    d->PolyDataActor = vtkSmartPointer<vtkActor>::New();
+    d->PolyDataActor->SetMapper(d->mapper);
+    d->PolyDataRenderer->AddActor(d->PolyDataActor);
+    activeRenderWindow->AddRenderer(d->PolyDataRenderer);
     activeRenderWindow->Render();
-    
+    activeRenderWindow->GetInteractor()->Start();
   }
 }
 
 //-----------------------------------------------------------------------------
-qSlicerConnectAndDisplayModuleWidget::~qSlicerConnectAndDisplayModuleWidget()
+qSlicerPolyDataCompressedTransmissionModuleWidget::~qSlicerPolyDataCompressedTransmissionModuleWidget()
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   d->IGTLConnectorNode->UnregisterMessageConverter(d->converter);
   d->converter->Delete();
 }
 
-void qSlicerConnectAndDisplayModuleWidget::setMRMLScene(vtkMRMLScene* scene)
+void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLScene(vtkMRMLScene* scene)
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   this->Superclass::setMRMLScene(scene);
-  if (d->NodeSelector)
-  {
-    d->NodeSelector->setMRMLScene(scene);
-  }
   if (this->mrmlScene())
   {
     d->IGTLConnectorNode = vtkMRMLIGTLConnectorNode::SafeDownCast(this->mrmlScene()->CreateNodeByClass("vtkMRMLIGTLConnectorNode"));
@@ -182,9 +166,9 @@ void qSlicerConnectAndDisplayModuleWidget::setMRMLScene(vtkMRMLScene* scene)
 }
 
 //------------------------------------------------------------------------------
-void qSlicerConnectAndDisplayModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode * connectorNode)
+void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode * connectorNode)
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   qvtkReconnect(d->IGTLConnectorNode, connectorNode, vtkCommand::ModifiedEvent,
                 this, SLOT(onMRMLNodeModified()));
   foreach(int evendId, QList<int>()
@@ -201,20 +185,19 @@ void qSlicerConnectAndDisplayModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLIGTLC
   this->setEnabled(connectorNode != 0);
 }
 //------------------------------------------------------------------------------
-void qSlicerConnectAndDisplayModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLNode* node)
+void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLNode* node)
 {
   this->setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode::SafeDownCast(node));
 }
 
 //------------------------------------------------------------------------------
-void qSlicerConnectAndDisplayModuleWidget::onMRMLNodeModified()
+void qSlicerPolyDataCompressedTransmissionModuleWidget::onMRMLNodeModified()
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   if (!d->IGTLConnectorNode)
   {
     return;
   }
-  d->NodeSelector->setCurrentNode(d->IGTLConnectorNode);
   
   d->ConnectorPortEdit->setText(QString("%1").arg(d->IGTLConnectorNode->GetServerPort()));
   
@@ -223,9 +206,9 @@ void qSlicerConnectAndDisplayModuleWidget::onMRMLNodeModified()
 }
 
 //------------------------------------------------------------------------------
-void qSlicerConnectAndDisplayModuleWidget::startCurrentIGTLConnector(bool value)
+void qSlicerPolyDataCompressedTransmissionModuleWidget::startCurrentIGTLConnector(bool value)
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   
   Q_ASSERT(d->IGTLConnectorNode);
   if (value)
@@ -261,9 +244,9 @@ void qSlicerConnectAndDisplayModuleWidget::startCurrentIGTLConnector(bool value)
 }
 
 //------------------------------------------------------------------------------
-void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
+void qSlicerPolyDataCompressedTransmissionModuleWidget::startVideoTransmission(bool value)
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   Q_ASSERT(d->IGTLConnectorNode);
   
   if(d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
@@ -289,9 +272,9 @@ void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
 }
 
 //------------------------------------------------------------------------------
-void qSlicerConnectAndDisplayModuleWidget::updateIGTLConnectorNode()
+void qSlicerPolyDataCompressedTransmissionModuleWidget::updateIGTLConnectorNode()
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   if (d->IGTLConnectorNode != NULL)
   {
     d->IGTLConnectorNode->DisableModifiedEventOn();
@@ -302,23 +285,21 @@ void qSlicerConnectAndDisplayModuleWidget::updateIGTLConnectorNode()
   }
 }
 
-
-void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
+void qSlicerPolyDataCompressedTransmissionModuleWidget::importDataAndEvents()
 {
-  Q_D(qSlicerConnectAndDisplayModuleWidget);
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
   vtkMRMLAbstractLogic* l = this->logic();
-  vtkSlicerConnectAndDisplayLogic * igtlLogic = vtkSlicerConnectAndDisplayLogic::SafeDownCast(l);
+  vtkSlicerPolyDataCompressedTransmissionLogic * igtlLogic = vtkSlicerPolyDataCompressedTransmissionLogic::SafeDownCast(l);
   if (igtlLogic)
   {
     int64_t startTime = Connector::getTime();
-    uint8_t *frame = igtlLogic->CallConnectorTimerHander();
+    d->polydata = igtlLogic->CallConnectorTimerHander();
     //-------------------
     // Convert the image in p_PixmapConversionBuffer to a QPixmap
-    if (frame && d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
+    if (d->polydata && d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
     {
-      memcpy((void*)d->imageData->GetScalarPointer(), (void*)frame, 1280*720*3);
-      d->imageData->Modified();
-      d->BackgroundRenderer->GetRenderWindow()->Render();
+      d->polydata->Modified();
+      d->PolyDataRenderer->GetRenderWindow()->Render();
       std::cerr<<"CallConnectorTimerHander Time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
     }
   }

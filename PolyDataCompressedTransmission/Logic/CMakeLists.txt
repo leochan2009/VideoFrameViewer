@@ -6,20 +6,19 @@ message(${MODULE_NAME})
 set(${KIT}_EXPORT_DIRECTIVE "VTK_SLICER_${MODULE_NAME_UPPER}_MODULE_LOGIC_EXPORT")
 
 set(${KIT}_INCLUDE_DIRECTORIES
-  ${vtkSlicerConnectAndDisplayModuleMRML_SOURCE_DIR}
-  ${vtkSlicerConnectAndDisplayModuleMRML_BINARY_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../MRML
-  ${CMAKE_CURRENT_BINARY_DIR}/../MRML
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../ConnectAndDisplay/MRML
+  ${CMAKE_CURRENT_BINARY_DIR}/../../ConnectAndDisplay/MRML
   )
 
 set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}Logic.cxx
   vtkSlicer${MODULE_NAME}Logic.h
   )
-LINK_DIRECTORIES("/usr/local/lib")
+LINK_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/../ConnectAndDisplay/MRML)
+LINK_DIRECTORIES("/usr/local/lib") #MRML is linked with iomp5 library, here it is only to find the iomp library for MRML
 set(${KIT}_TARGET_LIBRARIES
   ${ITK_LIBRARIES}
-  vtkSlicer${MODULE_NAME}ModuleMRML
+  vtkSlicerConnectAndDisplayModuleMRML
   )
 
 #-----------------------------------------------------------------------------

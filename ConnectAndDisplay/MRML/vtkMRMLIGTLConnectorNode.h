@@ -211,7 +211,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   // OpenIGTLink Message handlers
   //----------------------------------------------------------------
   int WaitForConnection();
-  int ReceiveController(vtkMRMLIGTLConnectorNode* igtlcon );
+  int ReceiveController();
   int SendData(int size, unsigned char* data);
   int Skip(int length, int skipFully=1);
 
@@ -323,8 +323,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   int GetIGTLTimeStamp(vtkMRMLNode* node, int& second, int& nanosecond);
 
   
-  virtual void setInterval (int timeInterva){interval = timeInterva;};
-  virtual void setUseCompress (int useComp){useCompress = useComp;};
+  void setInterval (int timeInterva){interval = timeInterva;};
+  void setUseCompress (int useComp){useCompress = useComp;};
 
  protected:
 
