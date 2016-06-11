@@ -119,8 +119,9 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
   virtual void SetVisibility(int vtkNotUsed(sw),
                              vtkMRMLScene * vtkNotUsed(scene),
                              vtkMRMLNode * vtkNotUsed(node)) {};
-  virtual void setInterval(int timeInterval){interval = timeInterval;};
+  virtual void setInterval(int timeInterval){Interval = timeInterval;};
   virtual void setUseCompress(bool useCompress){UseCompress = useCompress;};
+  virtual void setRequireConverstion(bool requireConversion){RequireYUVToRBGConversion = requireConversion;};
   
  protected:
   vtkIGTLToMRMLBase();
@@ -133,8 +134,9 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
 
   int CheckCRC;
   
-  int interval;
+  int Interval;
   bool UseCompress;
+  bool RequireYUVToRBGConversion;
 
   vtkIGTLToMRMLBasePrivate* Private;
 };

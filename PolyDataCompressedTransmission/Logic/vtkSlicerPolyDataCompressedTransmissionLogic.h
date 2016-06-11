@@ -28,7 +28,7 @@
 #include "vtkSlicerModuleLogic.h"
 
 // MRML includes
-#include "vtkIGTLToMRMLPolyData.h"
+#include "vtkIGTLToMRMLVideo.h"
 #include "vtkIGTLToMRMLBase.h"
 
 // STD includes
@@ -46,6 +46,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkVector.h>
+#include <vtkVertexGlyphFilter.h>
 
 #include "vtkSlicerPolyDataCompressedTransmissionModuleLogicExport.h"
 
@@ -172,10 +173,11 @@ private:
   //----------------------------------------------------------------
   // IGTL-MRML converters
   //----------------------------------------------------------------
-  vtkIGTLToMRMLPolyData * PolyConverter;
+  vtkIGTLToMRMLVideo * PolyConverter;
   
   unsigned char * lu;
   vtkSmartPointer<vtkUnsignedCharArray> colors;
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter;
   
 private:
   

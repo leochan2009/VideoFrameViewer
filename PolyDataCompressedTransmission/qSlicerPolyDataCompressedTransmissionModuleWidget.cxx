@@ -259,6 +259,7 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::startVideoTransmission(b
       d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
       d->IGTLConnectorNode->setInterval(interval);
       d->IGTLConnectorNode->setUseCompress(d->UseCompressCheckBox->isChecked());
+      d->IGTLConnectorNode->setRequireConversion(false);
       d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
     }
   }
@@ -298,8 +299,11 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::importDataAndEvents()
     // Convert the image in p_PixmapConversionBuffer to a QPixmap
     if (d->polydata && d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
     {
-      d->polydata->Modified();
+      d->mapper->SetInputData(d->polydata);
+      //d->PolyDataActor->SetMapper(d->mapper);
+      //d->PolyDataRenderer->AddActor(d->PolyDataActor);
       d->PolyDataRenderer->GetRenderWindow()->Render();
+      
       std::cerr<<"CallConnectorTimerHander Time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
     }
   }

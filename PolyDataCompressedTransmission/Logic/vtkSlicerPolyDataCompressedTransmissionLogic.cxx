@@ -30,6 +30,7 @@
 // STD includes
 #include <cassert>
 
+
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkSlicerPolyDataCompressedTransmissionLogic);
 
@@ -88,7 +89,7 @@ vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::Convert
         pt[0] = pt[1] = pt[2] = bad_point;
         continue;
       }
-      pt[2] = lu[pixelValue] * 0.001f;
+      pt[2] = lu[pixelValue];
       pt[0] = static_cast<float> (u) * pt[2] * constant;
       pt[1] = static_cast<float> (v) * pt[2] * constant;
       cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
@@ -111,9 +112,10 @@ vtkSlicerPolyDataCompressedTransmissionLogic::vtkSlicerPolyDataCompressedTransmi
   this->MessageConverterList.clear();
   this->polyData = vtkSmartPointer<vtkPolyData>::New();
   // register default data types
-  this->PolyConverter = vtkIGTLToMRMLPolyData::New();
+  this->PolyConverter = vtkIGTLToMRMLVideo::New();
   
   colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
   RegisterMessageConverter(this->PolyConverter);
   prepareLookupTables();
   
@@ -317,8 +319,14 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
       colors->SetNumberOfComponents(3);
       colors->SetName ("Colors");
       for (int i = 0; i< pointNum ; i++)
+      {
         colors->InsertNextTupleValue(red);
+      }
+      std::cerr<<points->GetPoint(10000)[0]<<std::endl;
       polyData->GetPointData()->SetScalars(colors);
+      vertexFilter->SetInputData(polyData);
+      vertexFilter->Update();
+      polyData->ShallowCopy(vertexFilter->GetOutput());
       return polyData;
     }
   }

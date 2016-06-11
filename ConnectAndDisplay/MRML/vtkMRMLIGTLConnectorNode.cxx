@@ -1674,6 +1674,7 @@ void vtkMRMLIGTLConnectorNode::PushQuery(vtkMRMLIGTLQueryNode* node)
   void* igtlMsg=NULL;
   converter->setInterval(this->interval);
   converter->setUseCompress(this->useCompress);
+  converter->setRequireConverstion(this->requireConversion);
   converter->MRMLToIGTL(0, node, &size, &igtlMsg);
   if (size<=0)
     {

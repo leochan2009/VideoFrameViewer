@@ -325,6 +325,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   
   void setInterval (int timeInterva){interval = timeInterva;};
   void setUseCompress (int useComp){useCompress = useComp;};
+  void setRequireConversion (int requireConver){requireConversion = requireConver;};
+  
 
  protected:
 
@@ -438,6 +440,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   int interval;
   
   bool useCompress;
+  
+  bool requireConversion;
   
   bool conversionFinish;
   igtl::ConditionVariable::Pointer conditionVar;

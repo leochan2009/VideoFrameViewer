@@ -296,7 +296,7 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
       RGBFrame = NULL;
     RGBFrame = new uint8_t[iHeight*iWidth*3];
     uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
-    if (_useCompress)
+    if (UseCompress)
     {
       H264Decode(this->decoder_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
     }
@@ -306,8 +306,15 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
     }
     fprintf (stderr, "decode total time:\t%f\n", (getTime()-iStart)/1e6);
     iStart = getTime();
-    bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
-    fprintf (stderr, "YUV420ToRGBConversion: \t%f\n", (getTime()-iStart)/1e6);
+    if (RequireYUVToRBGConversion)
+    {
+      bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
+      fprintf (stderr, "YUV420ToRGBConversion: \t%f\n", (getTime()-iStart)/1e6);
+    }
+    else
+    {
+       memcpy(RGBFrame, YUV420Frame, iWidth*iHeight*3/2);
+    }
     delete [] YUV420Frame;
     YUV420Frame = NULL;
     return RGBFrame;
@@ -404,8 +411,8 @@ int vtkIGTLToMRMLVideo::MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, i
           this->StartVideoMsg = igtl::StartVideoDataMessage::New();
         }
         this->StartVideoMsg->SetDeviceName(qnode->GetIGTLDeviceName());
-        this->StartVideoMsg->SetResolution(this->interval);
-        this->StartVideoMsg->SetUseCompress(this->_useCompress);
+        this->StartVideoMsg->SetResolution(this->Interval);
+        this->StartVideoMsg->SetUseCompress(this->UseCompress);
         this->StartVideoMsg->Pack();
         *size = this->StartVideoMsg->GetPackSize();
         *igtlMsg = this->StartVideoMsg->GetPackPointer();
