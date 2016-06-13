@@ -276,6 +276,7 @@ void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
       d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
       d->IGTLConnectorNode->setInterval(interval);
       d->IGTLConnectorNode->setUseCompress(d->UseCompressCheckBox->isChecked());
+      d->IGTLConnectorNode->setRequireConversion(true);
       d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
     }
   }

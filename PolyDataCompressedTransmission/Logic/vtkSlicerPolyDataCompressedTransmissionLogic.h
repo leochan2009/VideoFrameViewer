@@ -175,9 +175,10 @@ private:
   //----------------------------------------------------------------
   vtkIGTLToMRMLVideo * PolyConverter;
   
-  unsigned char * lu;
+  std::vector<int> lu;
   vtkSmartPointer<vtkUnsignedCharArray> colors;
   vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter;
+  vtkSmartPointer<vtkPoints>  cloud;
   
 private:
   

@@ -39,21 +39,22 @@ unsigned char red[3] = {255, 0, 0};
 // creates the structures for rapidly getting the values to be associated to each depth value, and populates them.
 void vtkSlicerPolyDataCompressedTransmissionLogic::prepareLookupTables()
 {
-  int lowBoundary = 0, highBoundary = 256;
+  int lowBoundary = 1000, highBoundary = 1255;
   unsigned int span = (highBoundary - lowBoundary);
-  lu = static_cast<unsigned char *>(malloc(sizeof(char) * (256)));
+  lu = std::vector<int>(256,0);
   
   double scale_factor = ((double)span)/(double)255;
   
   for(unsigned int j=0; j<256; j++){
-    lu[j] = (unsigned char)((double)j*scale_factor)+lowBoundary;
+    lu[j] = (unsigned int)((double)j*scale_factor)+lowBoundary;
   }
 }
 vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::ConvertDepthToPoints(unsigned char* buf, int depth_width_, int depth_height_)
 {
-  vtkSmartPointer<vtkPoints>  cloud = vtkSmartPointer<vtkPoints>::New();//(depth_width_*depth_height_,vtkVector<float, 3>());
+  ;//(depth_width_*depth_height_,vtkVector<float, 3>());
   
   bool isDepthOnly = false;
+  cloud->Reset();
   
   //I inserted 525 as Julius Kammerl said as focal length
   register float constant = 0;
@@ -95,6 +96,7 @@ vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::Convert
       cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
     }
   }
+  delete[] pBuf;
   return cloud;
 }
 
@@ -116,6 +118,7 @@ vtkSlicerPolyDataCompressedTransmissionLogic::vtkSlicerPolyDataCompressedTransmi
   
   colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
   vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  cloud = vtkSmartPointer<vtkPoints>::New();
   RegisterMessageConverter(this->PolyConverter);
   prepareLookupTables();
   
@@ -311,7 +314,9 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
   }
   if (RGBFrame)
   {
+    int64_t conversionTime = Connector::getTime();
     vtkSmartPointer<vtkPoints> points =  ConvertDepthToPoints((unsigned char*)RGBFrame, 640, 480);
+    std::cerr<<"Depth Image conversion Time: "<<(Connector::getTime()-conversionTime)/1e6 << std::endl;
     int pointNum = points->GetNumberOfPoints();
     if (pointNum>0)
     {
@@ -322,7 +327,6 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
       {
         colors->InsertNextTupleValue(red);
       }
-      std::cerr<<points->GetPoint(10000)[0]<<std::endl;
       polyData->GetPointData()->SetScalars(colors);
       vertexFilter->SetInputData(polyData);
       vertexFilter->Update();

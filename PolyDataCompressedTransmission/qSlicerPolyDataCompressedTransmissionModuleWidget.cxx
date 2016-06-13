@@ -289,22 +289,24 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::updateIGTLConnectorNode(
 void qSlicerPolyDataCompressedTransmissionModuleWidget::importDataAndEvents()
 {
   Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
-  vtkMRMLAbstractLogic* l = this->logic();
-  vtkSlicerPolyDataCompressedTransmissionLogic * igtlLogic = vtkSlicerPolyDataCompressedTransmissionLogic::SafeDownCast(l);
-  if (igtlLogic)
+  if (d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
   {
-    int64_t startTime = Connector::getTime();
-    d->polydata = igtlLogic->CallConnectorTimerHander();
-    //-------------------
-    // Convert the image in p_PixmapConversionBuffer to a QPixmap
-    if (d->polydata && d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
+    vtkMRMLAbstractLogic* l = this->logic();
+    vtkSlicerPolyDataCompressedTransmissionLogic * igtlLogic = vtkSlicerPolyDataCompressedTransmissionLogic::SafeDownCast(l);
+    if (igtlLogic)
     {
-      d->mapper->SetInputData(d->polydata);
-      //d->PolyDataActor->SetMapper(d->mapper);
-      //d->PolyDataRenderer->AddActor(d->PolyDataActor);
-      d->PolyDataRenderer->GetRenderWindow()->Render();
-      
-      std::cerr<<"CallConnectorTimerHander Time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
+      int64_t startTime = Connector::getTime();
+      d->polydata = igtlLogic->CallConnectorTimerHander();
+      //-------------------
+      // Convert the image in p_PixmapConversionBuffer to a QPixmap
+      if (d->polydata)
+      {
+        int64_t renderingTime = Connector::getTime();
+        d->mapper->SetInputData(d->polydata);
+        d->PolyDataRenderer->GetRenderWindow()->Render();
+        
+        std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
+      }
     }
   }
 }

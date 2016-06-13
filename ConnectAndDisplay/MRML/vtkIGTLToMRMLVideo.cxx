@@ -227,6 +227,7 @@ vtkIGTLToMRMLVideo::vtkIGTLToMRMLVideo()
   IGTLName = (char*)"Video";
   SetupDecoder();
   RGBFrame = NULL;
+  RequireYUVToRBGConversion = true;
 }
 
 //---------------------------------------------------------------------------
