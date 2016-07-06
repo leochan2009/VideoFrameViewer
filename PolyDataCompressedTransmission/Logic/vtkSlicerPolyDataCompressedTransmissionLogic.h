@@ -132,8 +132,12 @@ public:
   void GetDeviceNamesFromMrml(IGTLMrmlNodeListType &list);
   void GetDeviceNamesFromMrml(IGTLMrmlNodeListType &list, const char* mrmlTagName);
   //void GetDeviceTypes(std::vector<char*> &list);
+  unsigned char * GetFrame(){return RGBFrame;};
   
 protected:
+  unsigned char * RGBFrame;
+  
+ 
   
   //----------------------------------------------------------------
   // Constructor, destructor etc.

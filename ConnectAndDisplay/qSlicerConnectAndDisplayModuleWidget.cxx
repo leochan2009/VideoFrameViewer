@@ -112,10 +112,11 @@ qSlicerConnectAndDisplayModuleWidget::qSlicerConnectAndDisplayModuleWidget(QWidg
   qSlicerApplication *  app = qSlicerApplication::application();
   vtkRenderer* activeRenderer = app->layoutManager()->activeThreeDRenderer();
   vtkRenderWindow* activeRenderWindow = activeRenderer->GetRenderWindow();
-  activeRenderWindow->SetSize(1280,720);
+  int picWidth = 512, picHeight = 424;
+  activeRenderWindow->SetSize(picWidth,picHeight);
   d->imageData = vtkImageData::New();
-  d->imageData->SetDimensions(1280, 720, 1);
-  d->imageData->SetExtent(0, 1279,0, 719, 0, 0);
+  d->imageData->SetDimensions(picWidth, picHeight, 1);
+  d->imageData->SetExtent(0, picWidth-1,0, picHeight-1, 0, 0);
   d->imageData->SetSpacing(1.0, 1.0, 1.0);
   d->imageData->SetOrigin(0.0, 0.0, 0.0);
   vtkInformation* meta_data = vtkInformation::New();
@@ -276,7 +277,7 @@ void qSlicerConnectAndDisplayModuleWidget::startVideoTransmission(bool value)
       d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
       d->IGTLConnectorNode->setInterval(interval);
       d->IGTLConnectorNode->setUseCompress(d->UseCompressCheckBox->isChecked());
-      d->IGTLConnectorNode->setRequireConversion(true);
+      d->IGTLConnectorNode->setRequireConversion(false);
       d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
     }
   }
@@ -317,7 +318,7 @@ void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
     // Convert the image in p_PixmapConversionBuffer to a QPixmap
     if (frame && d->StartVideoCheckBox->checkState() == Qt::CheckState::Checked)
     {
-      memcpy((void*)d->imageData->GetScalarPointer(), (void*)frame, 1280*720*3);
+      memcpy((void*)d->imageData->GetScalarPointer(), (void*)frame, 512*424*3/2);
       d->imageData->Modified();
       d->BackgroundRenderer->GetRenderWindow()->Render();
       std::cerr<<"CallConnectorTimerHander Time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;

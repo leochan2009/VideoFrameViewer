@@ -56,10 +56,8 @@ int64_t getTime()
 }
 
 
-void ComposeByteSteam(uint8_t** inputData, SBufferInfo bufInfo, uint8_t *outputByteStream)
+void ComposeByteSteam(uint8_t** inputData, SBufferInfo bufInfo, uint8_t *outputByteStream,  int iWidth, int iHeight)
 {
-  int iHeight = bufInfo.UsrData.sSystemBuffer.iHeight ;
-  int iWidth = bufInfo.UsrData.sSystemBuffer.iWidth ;
   int iStride [2] = {bufInfo.UsrData.sSystemBuffer.iStride[0],bufInfo.UsrData.sSystemBuffer.iStride[1]};
 #pragma omp parallel for default(none) shared(outputByteStream,inputData, iStride, iHeight, iWidth)
   for (int i = 0; i < iHeight; i++)
@@ -180,7 +178,7 @@ void vtkIGTLToMRMLVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH26
     iTotal = iEnd - iStart;
     if (sDstBufInfo.iBufferStatus == 1) {
       int64_t iStart2 = getTime();
-      ComposeByteSteam(pData, sDstBufInfo, outputByteStream);
+      ComposeByteSteam(pData, sDstBufInfo, outputByteStream, iWidth,iHeight);
       
       fprintf (stderr, "compose time:\t%f\n", (getTime()-iStart2)/1e6);
       ++ iFrameCount;
@@ -294,8 +292,7 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
     int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
     if (RGBFrame)
       delete [] RGBFrame;
-      RGBFrame = NULL;
-    RGBFrame = new uint8_t[iHeight*iWidth*3];
+    RGBFrame = NULL;
     uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
     if (UseCompress)
     {
@@ -309,12 +306,14 @@ uint8_t * vtkIGTLToMRMLVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer )
     iStart = getTime();
     if (RequireYUVToRBGConversion)
     {
+      RGBFrame = new uint8_t[iHeight*iWidth*3];
       bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
       fprintf (stderr, "YUV420ToRGBConversion: \t%f\n", (getTime()-iStart)/1e6);
     }
     else
     {
-       memcpy(RGBFrame, YUV420Frame, iWidth*iHeight*3/2);
+      RGBFrame = new uint8_t[iHeight*iWidth*3/2];
+      memcpy(RGBFrame, YUV420Frame, iWidth*iHeight*3/2);
     }
     delete [] YUV420Frame;
     YUV420Frame = NULL;

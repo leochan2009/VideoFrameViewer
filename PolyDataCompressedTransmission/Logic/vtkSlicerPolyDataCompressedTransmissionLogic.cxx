@@ -73,42 +73,77 @@ vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::Convert
   
   //I also ignore invalid values completely
   float bad_point = std::numeric_limits<float>::quiet_NaN ();
-  std::vector<uint8_t> pBuf(depth_width_*depth_height_*4, 0);
-  for (int i = 0; i< depth_width_*depth_height_*4 ; i++)
+  bool _useDemux = false;
+  if(_useDemux)
   {
-    pBuf[i] = *(buf+i);
-  }
-  register int depth_idx = 0;
-  std::vector<int> strides(4,0);
-  int pointNum = 0;
-  for (int v = -centerY; v < centerY; ++v)
-  {
-    for (register int u = -centerX; u < centerX; ++u, ++depth_idx)
+    std::vector<uint8_t> pBuf(depth_width_*depth_height_*4, 0);
+    for (int i = 0; i< depth_width_*depth_height_*4 ; i++)
     {
-      strides[0] = depth_width_*2 * (v+centerY) + u + centerX;
-      strides[1] = depth_width_*2 * (v+centerY) + depth_width_ + u + centerX;
-      strides[2] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + u + centerX;
-      strides[3] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + depth_width_ + u + centerX;
-      for (int k = 0 ; k < 4; k++)
+      pBuf[i] = *(buf+i);
+    }
+    register int depth_idx = 0;
+    std::vector<int> strides(4,0);
+    int pointNum = 0;
+    for (int v = -centerY; v < centerY; ++v)
+    {
+      for (register int u = -centerX; u < centerX; ++u, ++depth_idx)
+      {
+        strides[0] = depth_width_*2 * (v+centerY) + u + centerX;
+        strides[1] = depth_width_*2 * (v+centerY) + depth_width_ + u + centerX;
+        strides[2] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + u + centerX;
+        strides[3] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + depth_width_ + u + centerX;
+        for (int k = 0 ; k < 4; k++)
+        {
+          vtkVector<float, 3> pt;
+          //This part is used for invalid measurements, I removed it
+          int pixelValue = pBuf[strides[k]];
+          if (pixelValue == 0 )
+          {
+            // not valid
+            pt[0] = pt[1] = pt[2] = bad_point;
+            continue;
+          }
+          pt[2] = pixelValue+k*255 + 500;
+          pt[0] = static_cast<float> (u) * pt[2] * constant;
+          pt[1] = static_cast<float> (v) * pt[2] * constant;
+          cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
+          pointNum ++;
+        }
+      }
+    }
+    pBuf.clear();
+  }
+  else
+  {
+    std::vector<uint8_t> pBuf(depth_width_*depth_height_, 0);
+    for (int i = 0; i< depth_width_*depth_height_; i++)
+    {
+      pBuf[i] = *(buf+i);
+    }
+    register int depth_idx = 0;
+    int pointNum = 0;
+    for (int v = -centerY; v < centerY; ++v)
+    {
+      for (register int u = -centerX; u < centerX; ++u, ++depth_idx)
       {
         vtkVector<float, 3> pt;
         //This part is used for invalid measurements, I removed it
-        int pixelValue = pBuf[strides[k]];
+        int pixelValue = pBuf[depth_idx];
         if (pixelValue == 0 )
         {
           // not valid
           pt[0] = pt[1] = pt[2] = bad_point;
           continue;
         }
-        pt[2] = pixelValue+k*255 + 500;
+        pt[2] = pixelValue + 500;
         pt[0] = static_cast<float> (u) * pt[2] * constant;
         pt[1] = static_cast<float> (v) * pt[2] * constant;
         cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
         pointNum ++;
       }
     }
+    pBuf.clear();
   }
-  pBuf.clear();
   return cloud;
 }
 
@@ -311,7 +346,7 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
   this->GetMRMLScene()->GetNodesByClass("vtkMRMLIGTLConnectorNode", nodes);
   
   std::vector<vtkMRMLNode*>::iterator iter;
-  unsigned char *RGBFrame = NULL;
+  RGBFrame = NULL;
   //for (cmiter = this->ConnectorMap.begin(); cmiter != this->ConnectorMap.end(); cmiter ++)
   for (iter = nodes.begin(); iter != nodes.end(); iter ++)
   {

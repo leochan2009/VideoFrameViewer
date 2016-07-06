@@ -74,6 +74,10 @@ public:
   vtkSmartPointer<vtkActor> PolyDataActor;
   vtkSmartPointer<vtkPolyData> polydata;
   vtkSmartPointer<vtkPolyDataMapper> mapper;
+  
+  uint8_t * RGBFrame;
+  int picWidth = 512;
+  int picHeight = 424;
 };
 
 //-----------------------------------------------------------------------------
@@ -84,6 +88,7 @@ qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate::qSlicerPolyDataCompres
 {
   this->IGTLConnectorNode = NULL;
   this->IGTLDataQueryNode = NULL;
+  RGBFrame = new uint8_t[picWidth*picHeight*3];
 }
 
 
@@ -131,6 +136,7 @@ qSlicerPolyDataCompressedTransmissionModuleWidget::qSlicerPolyDataCompressedTran
     activeRenderWindow->AddRenderer(d->PolyDataRenderer);
     activeRenderWindow->Render();
     activeRenderWindow->GetInteractor()->Start();
+    d->graphicsView->setFixedSize(d->picWidth, d->picHeight);
   }
 }
 
@@ -301,11 +307,18 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::importDataAndEvents()
       // Convert the image in p_PixmapConversionBuffer to a QPixmap
       if (d->polydata)
       {
+        memcpy(d->RGBFrame, igtlLogic->GetFrame(), d->picWidth*d->picHeight*3/2);
         int64_t renderingTime = Connector::getTime();
         d->mapper->SetInputData(d->polydata);
         d->PolyDataRenderer->GetRenderWindow()->Render();
-        
+        d->graphicsView->setRGBFrame(d->RGBFrame);
+        d->graphicsView->update();
         std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
+      }
+      else
+      {
+        d->mapper->SetInputData(d->polydata);
+        d->PolyDataRenderer->GetRenderWindow()->Render();
       }
     }
   }

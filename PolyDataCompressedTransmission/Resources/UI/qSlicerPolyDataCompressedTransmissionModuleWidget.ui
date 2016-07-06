@@ -19,7 +19,7 @@
      <property name="title">
       <string/>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
         <x>202</x>
@@ -185,12 +185,28 @@
        </item>
       </layout>
      </widget>
+     <widget class="SlicerVideoWidget" name="graphicsView">
+      <property name="geometry">
+        <rect>
+        <x>130</x>
+        <y>180</y>
+        <width>512</width>
+        <height>424</height>
+        </rect>
+      </property>
+     </widget>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
- </customwidgets>
+<customwidgets>
+  <customwidget>
+  <class>SlicerVideoWidget</class>
+  <extends>QWidget</extends>
+  <header>Widgets/SlicerVideoWidget.h</header>
+  <container>1</container>
+  </customwidget>
+</customwidgets>
  <tabstops>
   <tabstop>ConnectorStateCheckBox</tabstop>
  </tabstops>
