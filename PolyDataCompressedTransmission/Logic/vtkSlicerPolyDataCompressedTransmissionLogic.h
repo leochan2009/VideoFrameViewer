@@ -28,7 +28,7 @@
 #include "vtkSlicerModuleLogic.h"
 
 // MRML includes
-#include "vtkIGTLToMRMLVideo.h"
+#include "vtkIGTLToMRMLDepthVideo.h"
 #include "vtkIGTLToMRMLBase.h"
 
 // STD includes
@@ -135,6 +135,7 @@ public:
   unsigned char * GetFrame(){return RGBFrame;};
   
 protected:
+  unsigned char * DepthFrame;
   unsigned char * RGBFrame;
   
  
@@ -156,7 +157,7 @@ protected:
   void UpdateAll();
   void UpdateSliceDisplay();
   void prepareLookupTables();
-  vtkSmartPointer<vtkPoints> ConvertDepthToPoints(unsigned char* buf, int depth_width_, int depth_height_);
+  vtkSmartPointer<vtkPolyData> ConvertDepthToPoints(unsigned char* buf, unsigned char* bufColor, int depth_width_, int depth_height_);
   vtkCallbackCommand *DataCallbackCommand;
   
 private:
@@ -177,7 +178,7 @@ private:
   //----------------------------------------------------------------
   // IGTL-MRML converters
   //----------------------------------------------------------------
-  vtkIGTLToMRMLVideo * PolyConverter;
+  vtkIGTLToMRMLDepthVideo * PolyConverter;
   
   std::vector<int> lu;
   vtkSmartPointer<vtkUnsignedCharArray> colors;

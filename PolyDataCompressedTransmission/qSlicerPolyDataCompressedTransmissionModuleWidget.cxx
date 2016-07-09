@@ -65,7 +65,7 @@ public:
   
   vtkMRMLIGTLConnectorNode * IGTLConnectorNode;
   vtkMRMLIGTLQueryNode * IGTLDataQueryNode;
-  vtkIGTLToMRMLVideo* converter;
+  vtkIGTLToMRMLDepthVideo* converter;
   QTimer ImportDataAndEventsTimer;
   vtkSlicerPolyDataCompressedTransmissionLogic * logic();
   
@@ -158,7 +158,8 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLScene(vtkMRMLScen
     d->IGTLDataQueryNode = vtkMRMLIGTLQueryNode::SafeDownCast(this->mrmlScene()->CreateNodeByClass("vtkMRMLIGTLQueryNode"));
     this->mrmlScene()->AddNode(d->IGTLConnectorNode); //node added cause the IGTLConnectorNode be initialized
     this->mrmlScene()->AddNode(d->IGTLDataQueryNode);
-    d->converter = vtkIGTLToMRMLVideo::New();
+    d->converter = vtkIGTLToMRMLDepthVideo::New();
+    d->converter->SetIGTLName("ColoredDepth");
     d->IGTLConnectorNode->RegisterMessageConverter(d->converter);
     if (d->IGTLConnectorNode)
     {
@@ -259,7 +260,7 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::startVideoTransmission(b
   {
     if (d->FrameFrequency->text().toInt()>0.0000001 && d->FrameFrequency->text().toInt()<1000000)
     {
-      d->IGTLDataQueryNode->SetIGTLName("Video");
+      d->IGTLDataQueryNode->SetIGTLName("ColoredDepth");
       int interval = (int) (1000.0 / d->FrameFrequency->text().toInt());
       d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_START);
       d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
@@ -271,7 +272,7 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::startVideoTransmission(b
   }
   else
   {
-    d->IGTLDataQueryNode->SetIGTLName("Video");
+    d->IGTLDataQueryNode->SetIGTLName("ColoredDepth");
     d->IGTLDataQueryNode->SetQueryType(d->IGTLDataQueryNode->TYPE_STOP);
     d->IGTLDataQueryNode->SetQueryStatus(d->IGTLDataQueryNode->STATUS_PREPARED);
     d->IGTLConnectorNode->PushQuery(d->IGTLDataQueryNode);
@@ -307,18 +308,13 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::importDataAndEvents()
       // Convert the image in p_PixmapConversionBuffer to a QPixmap
       if (d->polydata)
       {
-        memcpy(d->RGBFrame, igtlLogic->GetFrame(), d->picWidth*d->picHeight*3/2);
+        memcpy(d->RGBFrame, igtlLogic->GetFrame(), d->picWidth*d->picHeight*3);
         int64_t renderingTime = Connector::getTime();
         d->mapper->SetInputData(d->polydata);
         d->PolyDataRenderer->GetRenderWindow()->Render();
         d->graphicsView->setRGBFrame(d->RGBFrame);
         d->graphicsView->update();
         std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
-      }
-      else
-      {
-        d->mapper->SetInputData(d->polydata);
-        d->PolyDataRenderer->GetRenderWindow()->Render();
       }
     }
   }

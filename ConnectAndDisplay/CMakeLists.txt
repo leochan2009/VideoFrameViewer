@@ -7,6 +7,7 @@ string(TOUPPER ${MODULE_NAME} MODULE_NAME_UPPER)
 
 #-----------------------------------------------------------------------------
 find_package(Slicer REQUIRED)
+find_package( OpenCV )
 include(${Slicer_USE_FILE})
 add_subdirectory(Logic)
 add_subdirectory(MRML)

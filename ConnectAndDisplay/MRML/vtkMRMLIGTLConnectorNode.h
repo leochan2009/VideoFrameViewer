@@ -327,6 +327,9 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   void setUseCompress (int useComp){useCompress = useComp;};
   void setRequireConversion (int requireConver){requireConversion = requireConver;};
   
+  uint8_t* RGBFrame;
+  uint8_t* DepthFrame;
+  
 
  protected:
 
@@ -343,8 +346,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   // to push individual "outgoing" MRML nodes, set "OpenIGTLinkIF.pushOnConnection" attribute to 1. 
   // The request will be processed in PushOutgonigMessages().
   void RequestPushOutgoingMessages();
-
- protected:
+  
+protected:
 
   //----------------------------------------------------------------
   // Reference role strings
@@ -434,8 +437,6 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   NodeInfoMapType          IncomingMRMLNodeInfoMap;
 
   int CheckCRC;
-  
-  uint8_t* RGBFrame;
   
   int interval;
   

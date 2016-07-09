@@ -1023,6 +1023,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
   GetUpdatedBuffersList(nameList);
   vtkMRMLIGTLConnectorNode::NameListType::iterator nameIter;
   RGBFrame = NULL;
+  DepthFrame = NULL;
   for (nameIter = nameList.begin(); nameIter != nameList.end(); nameIter ++)
   {
     vtkIGTLCircularBuffer* circBuffer = GetCircularBuffer(*nameIter);
@@ -1095,7 +1096,14 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             // Call the advanced creation call first to see if the requested converter needs the message itself
             int64_t startTime = Connector::getTime();
             //this->conversionFinish = false;
-            RGBFrame = converter->IGTLToMRML(buffer);
+            if(strcmp(buffer->GetDeviceName(), "DepthFrame") == 0)
+            {
+              DepthFrame = converter->IGTLToMRML(buffer);
+            }
+            else if(strcmp(buffer->GetDeviceName(), "ColorFrame") == 0)
+            {
+              RGBFrame = converter->IGTLToMRML(buffer);
+            }
             std::cerr<<"IGTL TO MRML time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
           
             this->conversionFinish = true;

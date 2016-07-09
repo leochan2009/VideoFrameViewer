@@ -49,13 +49,15 @@ void vtkSlicerPolyDataCompressedTransmissionLogic::prepareLookupTables()
     lu[j] = (unsigned int)((double)j*scale_factor)+lowBoundary;
   }
 }
-vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::ConvertDepthToPoints(unsigned char* buf, int depth_width_, int depth_height_) // now it is fixed to 512, 424
+vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::ConvertDepthToPoints(unsigned char* buf, unsigned char* bufColor, int depth_width_, int depth_height_) // now it is fixed to 512, 424
 {
   ;//(depth_width_*depth_height_,vtkVector<float, 3>());
   
   bool isDepthOnly = false;
   cloud->Reset();
-  
+  colors->Reset();
+  colors->SetNumberOfComponents(3);
+  colors->SetName("Colors");
   //I inserted 525 as Julius Kammerl said as focal length
   register float constant = 0;
   
@@ -129,7 +131,7 @@ vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::Convert
         vtkVector<float, 3> pt;
         //This part is used for invalid measurements, I removed it
         int pixelValue = pBuf[depth_idx];
-        if (pixelValue == 0 )
+        if (bufColor[3*depth_idx] == 0 && bufColor[3*depth_idx+1] == 0 && bufColor[3*depth_idx+2]==0 )
         {
           // not valid
           pt[0] = pt[1] = pt[2] = bad_point;
@@ -139,12 +141,24 @@ vtkSmartPointer<vtkPoints> vtkSlicerPolyDataCompressedTransmissionLogic::Convert
         pt[0] = static_cast<float> (u) * pt[2] * constant;
         pt[1] = static_cast<float> (v) * pt[2] * constant;
         cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
+        unsigned char color[3] = {bufColor[3*depth_idx],bufColor[3*depth_idx+1],bufColor[3*depth_idx+2]};
+        colors->InsertNextTupleValue(color);
+        //delete[] color;
         pointNum ++;
       }
     }
     pBuf.clear();
   }
-  return cloud;
+  int pointNum = cloud->GetNumberOfPoints();
+  if (pointNum>0)
+  {
+    polyData->SetPoints(cloud);
+    polyData->GetPointData()->SetScalars(colors);
+    vertexFilter->SetInputData(polyData);
+    vertexFilter->Update();
+    polyData->ShallowCopy(vertexFilter->GetOutput());
+  }
+  return polyData;;
 }
 
 vtkSlicerPolyDataCompressedTransmissionLogic::vtkSlicerPolyDataCompressedTransmissionLogic()
@@ -161,7 +175,7 @@ vtkSlicerPolyDataCompressedTransmissionLogic::vtkSlicerPolyDataCompressedTransmi
   this->MessageConverterList.clear();
   this->polyData = vtkSmartPointer<vtkPolyData>::New();
   // register default data types
-  this->PolyConverter = vtkIGTLToMRMLVideo::New();
+  this->PolyConverter = vtkIGTLToMRMLDepthVideo::New();
   
   colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
   vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
@@ -347,6 +361,7 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
   
   std::vector<vtkMRMLNode*>::iterator iter;
   RGBFrame = NULL;
+  DepthFrame = NULL;
   //for (cmiter = this->ConnectorMap.begin(); cmiter != this->ConnectorMap.end(); cmiter ++)
   for (iter = nodes.begin(); iter != nodes.end(); iter ++)
   {
@@ -355,31 +370,18 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
     {
       continue;
     }
-    RGBFrame = connector->ImportDataFromCircularBuffer();
+    connector->ImportDataFromCircularBuffer();
     connector->ImportEventsFromEventBuffer();
     connector->PushOutgoingMessages();
+    RGBFrame = connector->RGBFrame;
+    DepthFrame = connector->DepthFrame;
   }
-  if (RGBFrame)
+  if (DepthFrame && RGBFrame)
   {
     int64_t conversionTime = Connector::getTime();
-    vtkSmartPointer<vtkPoints> points =  ConvertDepthToPoints((unsigned char*)RGBFrame, 512, 424);
+    return ConvertDepthToPoints((unsigned char*)DepthFrame, RGBFrame, 512, 424);
     std::cerr<<"Depth Image conversion Time: "<<(Connector::getTime()-conversionTime)/1e6 << std::endl;
-    int pointNum = points->GetNumberOfPoints();
-    if (pointNum>0)
-    {
-      polyData->SetPoints(points);
-      colors->SetNumberOfComponents(3);
-      colors->SetName ("Colors");
-      for (int i = 0; i< pointNum ; i++)
-      {
-        colors->InsertNextTupleValue(red);
-      }
-      polyData->GetPointData()->SetScalars(colors);
-      vertexFilter->SetInputData(polyData);
-      vertexFilter->Update();
-      polyData->ShallowCopy(vertexFilter->GetOutput());
-      return polyData;
-    }
+    
   }
   return NULL;
 }
