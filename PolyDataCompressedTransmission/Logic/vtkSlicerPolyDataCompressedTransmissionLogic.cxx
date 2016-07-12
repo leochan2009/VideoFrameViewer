@@ -49,7 +49,7 @@ void vtkSlicerPolyDataCompressedTransmissionLogic::prepareLookupTables()
     lu[j] = (unsigned int)((double)j*scale_factor)+lowBoundary;
   }
 }
-vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::ConvertDepthToPoints(unsigned char* buf, unsigned char* bufColor, int depth_width_, int depth_height_) // now it is fixed to 512, 424
+vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::ConvertDepthToPoints(unsigned char* buf, unsigned char* bufIndex, unsigned char* bufColor, int depth_width_, int depth_height_) // now it is fixed to 512, 424
 {
   ;//(depth_width_*depth_height_,vtkVector<float, 3>());
   
@@ -75,45 +75,84 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::Conve
   
   //I also ignore invalid values completely
   float bad_point = std::numeric_limits<float>::quiet_NaN ();
-  bool _useDemux = false;
+  bool _useDemux = true;
+  int DemuxMethod = 2;
   if(_useDemux)
   {
-    std::vector<uint8_t> pBuf(depth_width_*depth_height_*4, 0);
-    for (int i = 0; i< depth_width_*depth_height_*4 ; i++)
+    if (DemuxMethod == 1)
     {
-      pBuf[i] = *(buf+i);
-    }
-    register int depth_idx = 0;
-    std::vector<int> strides(4,0);
-    int pointNum = 0;
-    for (int v = -centerY; v < centerY; ++v)
-    {
-      for (register int u = -centerX; u < centerX; ++u, ++depth_idx)
+      std::vector<uint8_t> pBuf(depth_width_*depth_height_*4, 0);
+      for (int i = 0; i< depth_width_*depth_height_*4 ; i++)
       {
-        strides[0] = depth_width_*2 * (v+centerY) + u + centerX;
-        strides[1] = depth_width_*2 * (v+centerY) + depth_width_ + u + centerX;
-        strides[2] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + u + centerX;
-        strides[3] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + depth_width_ + u + centerX;
-        for (int k = 0 ; k < 4; k++)
+        pBuf[i] = *(buf+i);
+      }
+      register int depth_idx = 0;
+      std::vector<int> strides(4,0);
+      int pointNum = 0;
+      for (int v = -centerY; v < centerY; ++v)
+      {
+        for (register int u = -centerX; u < centerX; ++u, ++depth_idx)
+        {
+          strides[0] = depth_width_*2 * (v+centerY) + u + centerX;
+          strides[1] = depth_width_*2 * (v+centerY) + depth_width_ + u + centerX;
+          strides[2] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + u + centerX;
+          strides[3] = depth_width_*2 * (v+centerY) + depth_height_*depth_width_*2 + depth_width_ + u + centerX;
+          for (int k = 0 ; k < 4; k++)
+          {
+            vtkVector<float, 3> pt;
+            //This part is used for invalid measurements, I removed it
+            int pixelValue = buf[strides[k]];
+            if (pixelValue == 0 || (bufColor[3*depth_idx] == 0 && bufColor[3*depth_idx+1] == 0 && bufColor[3*depth_idx+2]==0) )
+            {
+              // not valid
+              pt[0] = pt[1] = pt[2] = bad_point;
+              continue;
+            }
+            pt[2] = pixelValue+k*255 + 500;
+            pt[0] = static_cast<float> (-u) * pt[2] * constant;
+            pt[1] = static_cast<float> (-v) * pt[2] * constant;
+            cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
+            unsigned char color[3] = {bufColor[3*depth_idx],bufColor[3*depth_idx+1],bufColor[3*depth_idx+2]};
+            colors->InsertNextTupleValue(color);
+            pointNum ++;
+            break;
+          }
+        }
+      }
+      pBuf.clear();
+    }
+    else if(DemuxMethod==2)
+    {
+      std::vector<uint8_t> pBuf(depth_width_*depth_height_, 0);
+      for (int i = 0; i< depth_width_*depth_height_; i++)
+      {
+        pBuf[i] = *(bufIndex+i);
+      }
+      register int depth_idx = 0;
+      int pointNum = 0;
+      for (int v = -centerY; v < centerY; ++v)
+      {
+        for (register int u = -centerX; u < centerX; ++u, ++depth_idx)
         {
           vtkVector<float, 3> pt;
           //This part is used for invalid measurements, I removed it
-          int pixelValue = pBuf[strides[k]];
-          if (pixelValue == 0 )
+          int pixelValue = buf[depth_idx];
+          if((bufIndex[depth_idx] == 0) || (bufColor[3*depth_idx] == 0 && bufColor[3*depth_idx+1] == 0 && bufColor[3*depth_idx+2]==0) )
           {
             // not valid
             pt[0] = pt[1] = pt[2] = bad_point;
             continue;
           }
-          pt[2] = pixelValue+k*255 + 500;
-          pt[0] = static_cast<float> (u) * pt[2] * constant;
-          pt[1] = static_cast<float> (v) * pt[2] * constant;
+          pt[2] = pixelValue + (bufIndex[depth_idx]-1)*256 + 500;
+          pt[0] = static_cast<float> (-u) * pt[2] * constant;
+          pt[1] = static_cast<float> (-v) * pt[2] * constant;
           cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
+          unsigned char color[3] = {bufColor[3*depth_idx],bufColor[3*depth_idx+1],bufColor[3*depth_idx+2]};
+          colors->InsertNextTupleValue(color);
           pointNum ++;
         }
       }
     }
-    pBuf.clear();
   }
   else
   {
@@ -138,8 +177,8 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::Conve
           continue;
         }
         pt[2] = pixelValue + 500;
-        pt[0] = static_cast<float> (u) * pt[2] * constant;
-        pt[1] = static_cast<float> (v) * pt[2] * constant;
+        pt[0] = static_cast<float> (-u) * pt[2] * constant;
+        pt[1] = static_cast<float> (-v) * pt[2] * constant;
         cloud->InsertNextPoint(pt[0],pt[1],pt[2]);
         unsigned char color[3] = {bufColor[3*depth_idx],bufColor[3*depth_idx+1],bufColor[3*depth_idx+2]};
         colors->InsertNextTupleValue(color);
@@ -362,6 +401,7 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
   std::vector<vtkMRMLNode*>::iterator iter;
   RGBFrame = NULL;
   DepthFrame = NULL;
+  DepthIndex = NULL;
   //for (cmiter = this->ConnectorMap.begin(); cmiter != this->ConnectorMap.end(); cmiter ++)
   for (iter = nodes.begin(); iter != nodes.end(); iter ++)
   {
@@ -375,11 +415,12 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataCompressedTransmissionLogic::CallC
     connector->PushOutgoingMessages();
     RGBFrame = connector->RGBFrame;
     DepthFrame = connector->DepthFrame;
+    DepthIndex = connector->DepthIndex;
   }
-  if (DepthFrame && RGBFrame)
+  if (DepthFrame && RGBFrame && DepthIndex)
   {
     int64_t conversionTime = Connector::getTime();
-    return ConvertDepthToPoints((unsigned char*)DepthFrame, RGBFrame, 512, 424);
+    return ConvertDepthToPoints((unsigned char*)DepthFrame,DepthIndex, RGBFrame, 512, 424);
     std::cerr<<"Depth Image conversion Time: "<<(Connector::getTime()-conversionTime)/1e6 << std::endl;
     
   }

@@ -49,6 +49,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLDepthVideo : 
 
   int YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth);
   
+  bool RGBUpsampling(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth);
+  
   //virtual void setInterval(int timeInterval) {interval = timeInterval;};
   //virtual void setUseCompress(bool useCompress){_useCompress = useCompress;};
   //virtual void setRequiredConverstion(bool requireConversion){RequiredYUVToRBGConversion = requireConversion;};
@@ -62,6 +64,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLDepthVideo : 
   void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream);
   uint8_t *RGBFrame;
   uint8_t *DepthFrame;
+  uint8_t *DepthIndex;
  protected:
   igtl::VideoMessage::Pointer OutVideoMsg;
   ISVCDecoder* decoderDepth_;

@@ -137,7 +137,7 @@ public:
 protected:
   unsigned char * DepthFrame;
   unsigned char * RGBFrame;
-  
+  unsigned char * DepthIndex;
  
   
   //----------------------------------------------------------------
@@ -157,7 +157,7 @@ protected:
   void UpdateAll();
   void UpdateSliceDisplay();
   void prepareLookupTables();
-  vtkSmartPointer<vtkPolyData> ConvertDepthToPoints(unsigned char* buf, unsigned char* bufColor, int depth_width_, int depth_height_);
+  vtkSmartPointer<vtkPolyData> ConvertDepthToPoints(unsigned char* buf, unsigned char* bufIndex, unsigned char* bufColor, int depth_width_, int depth_height_);
   vtkCallbackCommand *DataCallbackCommand;
   
 private:

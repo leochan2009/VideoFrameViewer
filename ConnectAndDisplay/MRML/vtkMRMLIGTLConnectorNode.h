@@ -329,7 +329,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkMRMLIGTLConnectorNode :
   
   uint8_t* RGBFrame;
   uint8_t* DepthFrame;
-  
+  uint8_t* DepthIndex;
 
  protected:
 

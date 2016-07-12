@@ -281,7 +281,7 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
   igtl::VideoMessage::Pointer videoMsg;
   videoMsg = igtl::VideoMessage::New();
   videoMsg->AllocatePack(buffer->GetBodySizeToRead());
-  if(strcmp(buffer->GetDeviceName(), "DepthFrame") == 0)
+  if(strcmp(buffer->GetDeviceName(), "DepthFrame") == 0 || strcmp(buffer->GetDeviceName(), "DepthIndex") == 0)
   {
     memcpy(videoMsg->GetPackBodyPointer(),(unsigned char*) buffer->GetPackBodyPointer(),buffer->GetBodySizeToRead());
     // Deserialize the transform data
@@ -296,24 +296,48 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
       SBufferInfo bufInfo;
       memset (&bufInfo, 0, sizeof (SBufferInfo));
       int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
-      if (DepthFrame)
-        delete [] DepthFrame;
-      DepthFrame = NULL;
-      uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
-      if (UseCompress)
+      
+      
+      int DemuxMethod = 2;
+      if (DemuxMethod == 1)
       {
+        if (DepthIndex)
+          delete [] DepthIndex;
+        DepthIndex = NULL;
+        if (DepthFrame)
+          delete [] DepthFrame;
+        DepthFrame = NULL;
+        DepthIndex = new uint8_t[1]; // just to make the work flow continue;
+        uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
         H264Decode(this->decoderDepth_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+        DepthFrame = new uint8_t[iHeight*iWidth*3/2];
+        memcpy(DepthFrame, YUV420Frame, iWidth*iHeight*3/2);
+        delete [] YUV420Frame;
+        YUV420Frame = NULL;
+        fprintf (stderr, "decode depth frame total time:\t%f\n", (getTime()-iStart)/1e6);
+        return DepthFrame;
       }
-      else
+      else if (DemuxMethod == 2)
       {
-        memcpy(YUV420Frame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight*3/2);
+        if(strcmp(buffer->GetDeviceName(), "DepthFrame") == 0)
+        {
+          if (DepthFrame)
+            delete [] DepthFrame;
+          DepthFrame = NULL;
+          DepthFrame = new uint8_t[iHeight*iWidth];
+          memcpy(DepthFrame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight);
+          return DepthFrame;
+        }
+        else if(strcmp(buffer->GetDeviceName(), "DepthIndex") == 0)
+        {
+          if (DepthIndex)
+            delete [] DepthIndex;
+          DepthIndex = NULL;
+          DepthIndex = new uint8_t[iHeight*iWidth];
+          memcpy(DepthIndex, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight);
+          return DepthIndex;
+        }
       }
-      fprintf (stderr, "decode depth frame total time:\t%f\n", (getTime()-iStart)/1e6);
-      DepthFrame = new uint8_t[iHeight*iWidth*3/2];
-      memcpy(DepthFrame, YUV420Frame, iWidth*iHeight*3/2);
-      delete [] YUV420Frame;
-      YUV420Frame = NULL;
-      return DepthFrame;
     }
   }
   else if(strcmp(buffer->GetDeviceName(), "ColorFrame") == 0)
@@ -335,17 +359,18 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
         delete [] RGBFrame;
       RGBFrame = NULL;
       uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
-      if (UseCompress)
+      RGBFrame = new uint8_t[iHeight*iWidth*3];
+      bool UseCompressForRGB = false;
+      if (UseCompressForRGB)
       {
         H264Decode(this->decoderColor_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+        bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
       }
       else
       {
-        memcpy(YUV420Frame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight*3/2);
+        memcpy(RGBFrame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight*3);
       }
       fprintf (stderr, "decode color frame total time:\t%f\n", (getTime()-iStart)/1e6);
-      RGBFrame = new uint8_t[iHeight*iWidth*3];
-      bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
       delete [] YUV420Frame;
       YUV420Frame = NULL;
       return RGBFrame;
@@ -353,6 +378,17 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
   }
   return NULL;
   
+}
+
+bool vtkIGTLToMRMLDepthVideo::RGBUpsampling(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth)
+{
+  size_t i = 0;
+  for (int x = 0; x < iWidth*iHeight/2; x++) {
+    RGBFrame[3*(i+1)] = RGBFrame[3*i]  = YUV420Frame[3*x];
+    RGBFrame[3*(i+1)+1] = RGBFrame[3*i+1] = YUV420Frame[3*x + 1];
+    RGBFrame[3*(i+1)+2] = RGBFrame[3*i+2] = YUV420Frame[3*x + 2];
+    i = i + 2;
+  }
 }
 
 int vtkIGTLToMRMLDepthVideo::YUV420ToRGBConversion(uint8_t *RGBFrame, uint8_t * YUV420Frame, int iHeight, int iWidth)

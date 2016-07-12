@@ -1100,6 +1100,10 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             {
               DepthFrame = converter->IGTLToMRML(buffer);
             }
+            else if(strcmp(buffer->GetDeviceName(), "DepthIndex") == 0)
+            {
+              DepthIndex = converter->IGTLToMRML(buffer);
+            }
             else if(strcmp(buffer->GetDeviceName(), "ColorFrame") == 0)
             {
               RGBFrame = converter->IGTLToMRML(buffer);
