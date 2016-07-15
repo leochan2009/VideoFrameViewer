@@ -1077,6 +1077,8 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
           node->DisableModifiedEventOff();
           node->InvokePendingModifiedEvent();
           updatedNode = node;
+          this->conversionFinish = true;
+          this->conditionVar->Signal();
           }
         found = 1;
         break;
@@ -1107,6 +1109,10 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             else if(strcmp(buffer->GetDeviceName(), "ColorFrame") == 0)
             {
               RGBFrame = converter->IGTLToMRML(buffer);
+            }
+            else
+            {
+              
             }
             std::cerr<<"IGTL TO MRML time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
           

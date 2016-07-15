@@ -20,6 +20,8 @@ include(${Slicer_USE_FILE})
 # Extension modules
 add_subdirectory(ConnectAndDisplay)
 add_subdirectory(PolyDataCompressedTransmission)
+add_subdirectory(PolyDataPLYTransmission)
+
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------

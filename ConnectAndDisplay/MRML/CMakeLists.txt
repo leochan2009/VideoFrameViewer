@@ -27,6 +27,7 @@ if(OpenIGTLink_PROTOCOL_VERSION GREATER 1)
     vtkMRMLIGTLQueryNode.cxx
     vtkIGTLToMRMLVideo.cxx
     vtkIGTLToMRMLDepthVideo.cxx
+    vtkIGTLToMRMLPolyData.cxx
     )
 endif()
 message(${OpenH264Lib})
