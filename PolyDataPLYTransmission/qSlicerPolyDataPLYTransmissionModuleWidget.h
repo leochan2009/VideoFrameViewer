@@ -59,15 +59,12 @@ public:
   virtual ~qSlicerPolyDataPLYTransmissionModuleWidget();
   
   public slots:
-  /// Set the MRML node of interest
-  void setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode * connectorNode);
-  
+
   void setMRMLScene(vtkMRMLScene* scene);
   
   /// Utility function that calls setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode*)
   /// It's useful to connect to vtkMRMLNode* signals when you are sure of
   /// the type
-  void setMRMLIGTLConnectorNode(vtkMRMLNode* node);
   
   void importDataAndEvents();
   

@@ -107,7 +107,7 @@ public:
   vtkMRMLIGTLConnectorNode* GetConnector(const char* conID);
   
   // Call timer-driven routines for each connector
-  vtkSmartPointer<vtkPolyData>  CallConnectorTimerHander();
+  void  CallConnectorTimerHander();
   
   // Device Name management
   int  SetRestrictDeviceName(int f);

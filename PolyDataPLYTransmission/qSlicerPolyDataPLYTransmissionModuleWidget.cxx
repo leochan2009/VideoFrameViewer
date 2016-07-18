@@ -45,6 +45,12 @@
 #include "vtkMRMLIGTLQueryNode.h"
 #include <qMRMLNodeFactory.h>
 
+#include <vtkMRMLScalarVolumeNode.h>
+#include <vtkMRMLModelNode.h>
+#include <vtkMRMLModelDisplayNode.h>
+#include <vtkMRMLScalarVolumeDisplayNode.h>
+#include <vtkMRMLVectorVolumeDisplayNode.h>
+
 //VTK include
 #include <vtkNew.h>
 #include <vtkPolyData.h>
@@ -150,6 +156,8 @@ void qSlicerPolyDataPLYTransmissionModuleWidget::setMRMLScene(vtkMRMLScene* scen
   {
     d->IGTLConnectorNode = vtkMRMLIGTLConnectorNode::SafeDownCast(this->mrmlScene()->CreateNodeByClass("vtkMRMLIGTLConnectorNode"));
     d->IGTLDataQueryNode = vtkMRMLIGTLQueryNode::SafeDownCast(this->mrmlScene()->CreateNodeByClass("vtkMRMLIGTLQueryNode"));
+    qvtkReconnect(d->IGTLConnectorNode, vtkMRMLIGTLConnectorNode::DeviceModifiedEvent,
+                  this, SLOT(onMRMLNodeModified()));
     this->mrmlScene()->AddNode(d->IGTLConnectorNode); //node added cause the IGTLConnectorNode be initialized
     this->mrmlScene()->AddNode(d->IGTLDataQueryNode);
     d->converter = vtkIGTLToMRMLPolyData::New();
@@ -166,31 +174,6 @@ void qSlicerPolyDataPLYTransmissionModuleWidget::setMRMLScene(vtkMRMLScene* scen
 }
 
 //------------------------------------------------------------------------------
-void qSlicerPolyDataPLYTransmissionModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode * connectorNode)
-{
-  Q_D(qSlicerPolyDataPLYTransmissionModuleWidget);
-  qvtkReconnect(d->IGTLConnectorNode, connectorNode, vtkCommand::ModifiedEvent,
-                this, SLOT(onMRMLNodeModified()));
-  foreach(int evendId, QList<int>()
-          << vtkMRMLIGTLConnectorNode::ActivatedEvent
-          << vtkMRMLIGTLConnectorNode::ConnectedEvent
-          << vtkMRMLIGTLConnectorNode::DisconnectedEvent
-          << vtkMRMLIGTLConnectorNode::DeactivatedEvent)
-  {
-    qvtkReconnect(d->IGTLConnectorNode, connectorNode, evendId,
-                  this, SLOT(onMRMLNodeModified()));
-  }
-  
-  this->onMRMLNodeModified();
-  this->setEnabled(connectorNode != 0);
-}
-//------------------------------------------------------------------------------
-void qSlicerPolyDataPLYTransmissionModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLNode* node)
-{
-  this->setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode::SafeDownCast(node));
-}
-
-//------------------------------------------------------------------------------
 void qSlicerPolyDataPLYTransmissionModuleWidget::onMRMLNodeModified()
 {
   Q_D(qSlicerPolyDataPLYTransmissionModuleWidget);
@@ -199,10 +182,16 @@ void qSlicerPolyDataPLYTransmissionModuleWidget::onMRMLNodeModified()
     return;
   }
   
-  d->ConnectorPortEdit->setText(QString("%1").arg(d->IGTLConnectorNode->GetServerPort()));
-  
-  bool deactivated = d->IGTLConnectorNode->GetState() == vtkMRMLIGTLConnectorNode::STATE_OFF;
-  d->ConnectorStateCheckBox->setChecked(!deactivated);
+  vtkSmartPointer<vtkMRMLModelNode> modelNode = vtkMRMLModelNode::SafeDownCast(this->mrmlScene()->GetFirstNodeByName("KinectRGBD"));
+  d->polydata = modelNode->GetPolyData();
+  if (d->polydata)
+  {
+    int64_t renderingTime = Connector::getTime();
+    d->mapper->SetInputData(d->polydata);
+    d->PolyDataRenderer->GetRenderWindow()->Render();
+    d->graphicsView->update();
+    std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -294,17 +283,10 @@ void qSlicerPolyDataPLYTransmissionModuleWidget::importDataAndEvents()
     if (igtlLogic)
     {
       int64_t startTime = Connector::getTime();
-      d->polydata = igtlLogic->CallConnectorTimerHander();
+      igtlLogic->CallConnectorTimerHander();
       //-------------------
       // Convert the image in p_PixmapConversionBuffer to a QPixmap
-      if (d->polydata)
-      {
-        int64_t renderingTime = Connector::getTime();
-        d->mapper->SetInputData(d->polydata);
-        d->PolyDataRenderer->GetRenderWindow()->Render();
-        d->graphicsView->update();
-        std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
-      }
+      
     }
   }
 }

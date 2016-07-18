@@ -1077,6 +1077,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
           node->DisableModifiedEventOff();
           node->InvokePendingModifiedEvent();
           updatedNode = node;
+          this->InvokeEvent(vtkMRMLIGTLConnectorNode::DeviceModifiedEvent, node);
           this->conversionFinish = true;
           this->conditionVar->Signal();
           }
@@ -1096,6 +1097,9 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
         if (nCol == 0)
           {
             // Call the advanced creation call first to see if the requested converter needs the message itself
+            vtkMRMLNode* node = converter->CreateNewNodeWithMessage(this->GetScene(), buffer->GetDeviceName(), buffer);
+            NodeInfoType* nodeInfo = RegisterIncomingMRMLNode(node);
+            node->DisableModifiedEventOn();
             int64_t startTime = Connector::getTime();
             //this->conversionFinish = false;
             if(strcmp(buffer->GetDeviceName(), "DepthFrame") == 0)
@@ -1110,12 +1114,22 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             {
               RGBFrame = converter->IGTLToMRML(buffer);
             }
-            else
+            else if(strcmp(buffer->GetDeviceName(), "KinectRGBD") == 0)
             {
-              
+              converter->IGTLToMRML(buffer, node);
             }
             std::cerr<<"IGTL TO MRML time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
-          
+            igtl::TimeStamp::Pointer ts = igtl::TimeStamp::New();
+            buffer->GetTimeStamp(ts);
+            nodeInfo->second = ts->GetSecond();
+            nodeInfo->nanosecond = ts->GetNanosecond();
+            
+            node->Modified();  // in case converter doesn't call any Modifieds itself
+            node->DisableModifiedEventOff();
+            node->InvokePendingModifiedEvent();
+            updatedNode = node;
+            this->InvokeEvent(vtkMRMLIGTLConnectorNode::NewDeviceEvent, node);
+            this->InvokeEvent(vtkMRMLIGTLConnectorNode::DeviceModifiedEvent, node);
             this->conversionFinish = true;
             this->conditionVar->Signal();
           }

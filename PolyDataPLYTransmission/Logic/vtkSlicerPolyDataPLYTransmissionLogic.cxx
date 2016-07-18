@@ -220,7 +220,7 @@ vtkMRMLIGTLConnectorNode* vtkSlicerPolyDataPLYTransmissionLogic::GetConnector(co
 }
 
 //---------------------------------------------------------------------------
-vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataPLYTransmissionLogic::CallConnectorTimerHander()
+void vtkSlicerPolyDataPLYTransmissionLogic::CallConnectorTimerHander()
 {
   //ConnectorMapType::iterator cmiter;
   std::vector<vtkMRMLNode*> nodes;
@@ -239,7 +239,6 @@ vtkSmartPointer<vtkPolyData> vtkSlicerPolyDataPLYTransmissionLogic::CallConnecto
     connector->ImportEventsFromEventBuffer();
     connector->PushOutgoingMessages();
   }
-  return NULL;
 }
 
 
