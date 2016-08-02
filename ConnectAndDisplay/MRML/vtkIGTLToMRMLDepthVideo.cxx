@@ -205,14 +205,18 @@ label_exit:
 
 int vtkIGTLToMRMLDepthVideo::SetupDecoder()
 {
-  WelsCreateDecoder (&decoderDepth_);
+ 
   SDecodingParam decParam;
   memset (&decParam, 0, sizeof (SDecodingParam));
   decParam.uiTargetDqLayer = UCHAR_MAX;
   decParam.eEcActiveIdc = ERROR_CON_SLICE_COPY;
   decParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
+  WelsCreateDecoder (&decoderDepth_);
   decoderDepth_->Initialize (&decParam);
-  
+  WelsCreateDecoder (&decoderDepthIndex_);
+  decoderDepthIndex_->Initialize (&decParam);
+  WelsCreateDecoder (&decoderDepthFrame_);
+  decoderDepthFrame_->Initialize (&decParam);
   WelsCreateDecoder (&decoderColor_);
   decoderColor_->Initialize (&decParam);
   return 1;
@@ -258,13 +262,6 @@ vtkMRMLNode* vtkIGTLToMRMLDepthVideo::CreateNewNodeWithMessage(vtkMRMLScene* sce
   
   ///double range[2];
   vtkDebugMacro("Set basic display info");
-  //volumeNode->GetImageData()->GetScalarRange(range);
-  //range[0] = 0.0;
-  //range[1] = 256.0;
-  //displayNode->SetLowerThreshold(range[0]);
-  //displayNode->SetUpperThreshold(range[1]);
-  //displayNode->SetWindow(range[1] - range[0]);
-  //displayNode->SetLevel(0.5 * (range[1] + range[0]) );
   
   vtkDebugMacro("Name vol node "<<volumeNode->GetClassName());
   vtkMRMLNode* n = scene->AddNode(volumeNode);
@@ -298,7 +295,7 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
       int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
       
       
-      int DemuxMethod = 2;
+      int DemuxMethod = 3;
       if (DemuxMethod == 1)
       {
         if (DepthIndex)
@@ -326,6 +323,26 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
           DepthFrame = NULL;
           DepthFrame = new uint8_t[iHeight*iWidth];
           memcpy(DepthFrame, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight);
+          std::string outname = "DepthFrame.264";
+          FILE* pf = fopen(outname.c_str(), "a");
+          if (pf == NULL){
+            fprintf(stderr, "Error open file %s\nPress ENTER to exit\n");
+            getchar();
+            exit(-1);
+          }
+          int temp;
+          for(unsigned int r=0; r<iHeight; r++)
+          {
+            for(unsigned int c=0; c<iWidth; c++)
+            {
+              
+              fputc( DepthFrame[r* iWidth+ c], pf);
+            }
+          }
+          for (int r=0; r<iHeight*iWidth/2; r++){
+            temp = fputc(0, pf);
+          }
+          fclose(pf);
           return DepthFrame;
         }
         else if(strcmp(buffer->GetDeviceName(), "DepthIndex") == 0)
@@ -335,6 +352,61 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
           DepthIndex = NULL;
           DepthIndex = new uint8_t[iHeight*iWidth];
           memcpy(DepthIndex, videoMsg->GetPackFragmentPointer(2), iWidth*iHeight);
+          std::string outname = "Frame2.YUV";
+          FILE* pf2 = fopen(outname.c_str(), "a");
+          if (pf2 == NULL){
+            fprintf(stderr, "Error open file %s\nPress ENTER to exit\n");
+            getchar();
+            exit(-1);
+          }
+          for(unsigned int r=0; r<iHeight; r++)
+          {
+            for(unsigned int c=0; c<iWidth; c++)
+            {
+              
+              fputc( DepthIndex[r* iWidth+ c], pf2);
+            }
+          }
+          int temp;
+          for (int r=0; r<iHeight*iWidth/2; r++){
+            temp = fputc(0, pf2);
+          }
+          fclose(pf2);
+          return DepthIndex;
+        }
+      }
+      else if (DemuxMethod == 3)
+      {
+        if(strcmp(buffer->GetDeviceName(), "DepthFrame") == 0)
+        {
+          if (DepthFrame)
+            delete [] DepthFrame;
+          DepthFrame = NULL;
+          DepthFrame = new uint8_t[iHeight*iWidth];
+          H264Decode(this->decoderDepthIndex_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthFrame);
+          std::string outname = "DepthFrame.264";
+          FILE* pf = fopen(outname.c_str(), "a");
+          int temp;
+          for (int r=0; r<streamLength; r++){
+            temp = fputc(*(videoMsg->GetPackFragmentPointer(2)+r), pf);
+          }
+          fclose(pf);
+          return DepthFrame;
+        }
+        else if(strcmp(buffer->GetDeviceName(), "DepthIndex") == 0)
+        {
+          if (DepthIndex)
+            delete [] DepthIndex;
+          DepthIndex = NULL;
+          DepthIndex = new uint8_t[iHeight*iWidth];
+          H264Decode(this->decoderDepthFrame_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthIndex);
+          std::string outname = "DepthIndex.264";
+          FILE* pf = fopen(outname.c_str(), "a");
+          int temp;
+          for (int r=0; r<streamLength; r++){
+            temp = fputc(*(videoMsg->GetPackFragmentPointer(2)+r), pf);
+          }
+          fclose(pf);
           return DepthIndex;
         }
       }
@@ -360,10 +432,17 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
       RGBFrame = NULL;
       uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
       RGBFrame = new uint8_t[iHeight*iWidth*3];
-      bool UseCompressForRGB = false;
+      bool UseCompressForRGB = true;
       if (UseCompressForRGB)
       {
         H264Decode(this->decoderColor_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+        std::string outname = "ColorFrame.264";
+        FILE* pf = fopen(outname.c_str(), "a");
+        int temp;
+        for (int r=0; r<streamLength; r++){
+          temp = fputc(*(videoMsg->GetPackFragmentPointer(2)+r), pf);
+        }
+        fclose(pf);
         bool bConverion = YUV420ToRGBConversion(RGBFrame, YUV420Frame, iHeight, iWidth);
       }
       else

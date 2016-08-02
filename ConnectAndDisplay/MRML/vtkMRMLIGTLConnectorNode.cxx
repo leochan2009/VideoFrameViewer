@@ -1024,6 +1024,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
   vtkMRMLIGTLConnectorNode::NameListType::iterator nameIter;
   RGBFrame = NULL;
   DepthFrame = NULL;
+  PolyData = NULL;
   for (nameIter = nameList.begin(); nameIter != nameList.end(); nameIter ++)
   {
     vtkIGTLCircularBuffer* circBuffer = GetCircularBuffer(*nameIter);
@@ -1066,7 +1067,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
         if ((inIter->second).lock == 0)
           {
           node->DisableModifiedEventOn();
-          converter->IGTLToMRML(buffer, node);
+          PolyData = converter->IGTLToMRML(buffer, node);
           // Save OpenIGTLink time stamp
           igtl::TimeStamp::Pointer ts = igtl::TimeStamp::New();
           buffer->GetTimeStamp(ts);
@@ -1116,7 +1117,7 @@ uint8_t* vtkMRMLIGTLConnectorNode::ImportDataFromCircularBuffer()
             }
             else if(strcmp(buffer->GetDeviceName(), "KinectRGBD") == 0)
             {
-              converter->IGTLToMRML(buffer, node);
+              PolyData = converter->IGTLToMRML(buffer, node);
             }
             std::cerr<<"IGTL TO MRML time: "<<(Connector::getTime()-startTime)/1e6 << std::endl;
             igtl::TimeStamp::Pointer ts = igtl::TimeStamp::New();

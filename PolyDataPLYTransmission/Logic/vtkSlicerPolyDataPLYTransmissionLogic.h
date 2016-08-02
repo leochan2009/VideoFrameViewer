@@ -134,11 +134,13 @@ public:
   //void GetDeviceTypes(std::vector<char*> &list);
   unsigned char * GetFrame(){return RGBFrame;};
   
+  vtkSmartPointer<vtkPolyData> GetPolyData(){return PolyData;};
+  
 protected:
   unsigned char * DepthFrame;
   unsigned char * RGBFrame;
   unsigned char * DepthIndex;
- 
+  vtkSmartPointer<vtkPolyData> PolyData;
   
   //----------------------------------------------------------------
   // Constructor, destructor etc.
@@ -161,8 +163,7 @@ protected:
 private:
   
   int Initialized;
-  
-  vtkSmartPointer<vtkPolyData> polyData;
+
   //----------------------------------------------------------------
   // Connector Management
   //----------------------------------------------------------------

@@ -30,21 +30,6 @@
 #include <vtkMRMLScalarVolumeDisplayNode.h>
 #include <vtkMRMLVectorVolumeDisplayNode.h>
 
-// VTK includes
-#include <vtkPolyData.h>
-#include <vtkIntArray.h>
-#include <vtkMatrix4x4.h>
-#include <vtkObjectFactory.h>
-#include <vtkSmartPointer.h>
-#include <vtkVertex.h>
-#include <vtkCellArray.h>
-#include <vtkPolyLine.h>
-#include <vtkPolygon.h>
-#include <vtkTriangleStrip.h>
-#include <vtkFloatArray.h>
-#include <vtkDataSetAttributes.h>
-#include <vtkPointData.h>
-#include <vtkCellData.h>
 
 
 // VTKSYS includes
@@ -57,6 +42,11 @@ vtkStandardNewMacro(vtkIGTLToMRMLPolyData);
 //---------------------------------------------------------------------------
 vtkIGTLToMRMLPolyData::vtkIGTLToMRMLPolyData()
 {
+  poly = vtkSmartPointer<vtkPolyData>::New();
+  colors = vtkUnsignedCharArray::New();
+  colors->Reset();
+  colors->SetNumberOfComponents(3);
+  colors->SetName("Colors");
 }
 
 //---------------------------------------------------------------------------
@@ -130,7 +120,7 @@ vtkIntArray* vtkIGTLToMRMLPolyData::GetNodeEvents()
 
 
 //---------------------------------------------------------------------------
-int vtkIGTLToMRMLPolyData::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node)
+vtkSmartPointer<vtkPolyData> vtkIGTLToMRMLPolyData::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node)
 {
 
   vtkMRMLModelNode* modelNode = vtkMRMLModelNode::SafeDownCast(node);
@@ -156,8 +146,6 @@ int vtkIGTLToMRMLPolyData::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRML
     vtkErrorMacro("Unable to create MRML node from incoming POLYDATA message. Failed to unpack the message");
     return 0;
     }
-
-  vtkSmartPointer<vtkPolyData> poly = vtkSmartPointer<vtkPolyData>::New();
 
   if (poly.GetPointer()==NULL)
     {
@@ -341,14 +329,29 @@ int vtkIGTLToMRMLPolyData::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRML
       poly->GetCellData()->AddArray(data);
       }
     }
-
+  // Points RGB
+  std::vector<igtlUint8> pointsRGB = polyDataMsg->GetPointsRGB();
+  int nPointsRGB = polyDataMsg->GetNumberOfPointsRGB();
+  if (nPointsRGB > 0)
+  {
+    for (int i = 0; i < nPointsRGB; i ++)
+    {
+      unsigned char color[3] = {pointsRGB[3*i],pointsRGB[3*i+1],pointsRGB[3*i+2]};
+      colors->InsertNextTupleValue(color);
+    }
+    poly->GetPointData()->SetScalars(colors);
+  }
+  else
+  {
+    // ERROR: No points defined
+  }
 
   modelNode->SetAndObservePolyData(poly);
 
   poly->Modified();
   modelNode->Modified();
 
-  return 1;
+  return poly;
 
 }
 

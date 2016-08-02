@@ -25,6 +25,21 @@
 
 // VTK includes
 #include <vtkObject.h>
+// VTK includes
+#include <vtkPolyData.h>
+#include <vtkIntArray.h>
+#include <vtkMatrix4x4.h>
+#include <vtkObjectFactory.h>
+#include <vtkSmartPointer.h>
+#include <vtkVertex.h>
+#include <vtkCellArray.h>
+#include <vtkPolyLine.h>
+#include <vtkPolygon.h>
+#include <vtkTriangleStrip.h>
+#include <vtkFloatArray.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkPointData.h>
+#include <vtkCellData.h>
 
 class vtkCellArray;
 class vtkDataSetAttributes;
@@ -45,13 +60,16 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLPolyData : pu
   virtual vtkMRMLNode* CreateNewNodeWithMessage(vtkMRMLScene* scene, const char* name,
                                                 igtl::MessageBase::Pointer incomingPolyDataMessage);
 
-  virtual int          IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node);
+  virtual vtkSmartPointer<vtkPolyData>  IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node);
   virtual int          MRMLToIGTL(unsigned long event, vtkMRMLNode* mrmlNode, int* size, void** igtlMsg);
 
 
  protected:
   vtkIGTLToMRMLPolyData();
   ~vtkIGTLToMRMLPolyData();
+  
+  vtkSmartPointer<vtkPolyData> poly;
+  vtkSmartPointer<vtkUnsignedCharArray> colors;
 
   int IGTLToVTKScalarType(int igtlType);
 

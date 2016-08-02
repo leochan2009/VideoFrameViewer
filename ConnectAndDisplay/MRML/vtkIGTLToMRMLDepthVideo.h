@@ -68,6 +68,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLDepthVideo : 
  protected:
   igtl::VideoMessage::Pointer OutVideoMsg;
   ISVCDecoder* decoderDepth_;
+  ISVCDecoder* decoderDepthFrame_;
+  ISVCDecoder* decoderDepthIndex_;
   ISVCDecoder* decoderColor_;
   char*  IGTLName;
   //int interval;

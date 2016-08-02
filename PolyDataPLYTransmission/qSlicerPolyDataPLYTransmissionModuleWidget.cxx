@@ -80,6 +80,7 @@ public:
   vtkSmartPointer<vtkActor> PolyDataActor;
   vtkSmartPointer<vtkPolyData> polydata;
   vtkSmartPointer<vtkPolyDataMapper> mapper;
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter;
 };
 
 //-----------------------------------------------------------------------------
@@ -127,6 +128,7 @@ qSlicerPolyDataPLYTransmissionModuleWidget::qSlicerPolyDataPLYTransmissionModule
   d->PolyDataRenderer = activeRenderer;
   vtkRenderWindow* activeRenderWindow = activeRenderer->GetRenderWindow();
   d->polydata = vtkSmartPointer<vtkPolyData>::New();
+  d->vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
   if (activeRenderer)
   {
     d->mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -180,17 +182,6 @@ void qSlicerPolyDataPLYTransmissionModuleWidget::onMRMLNodeModified()
   if (!d->IGTLConnectorNode)
   {
     return;
-  }
-  
-  vtkSmartPointer<vtkMRMLModelNode> modelNode = vtkMRMLModelNode::SafeDownCast(this->mrmlScene()->GetFirstNodeByName("KinectRGBD"));
-  d->polydata = modelNode->GetPolyData();
-  if (d->polydata)
-  {
-    int64_t renderingTime = Connector::getTime();
-    d->mapper->SetInputData(d->polydata);
-    d->PolyDataRenderer->GetRenderWindow()->Render();
-    d->graphicsView->update();
-    std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
   }
 }
 
@@ -284,6 +275,18 @@ void qSlicerPolyDataPLYTransmissionModuleWidget::importDataAndEvents()
     {
       int64_t startTime = Connector::getTime();
       igtlLogic->CallConnectorTimerHander();
+      d->polydata = d->logic()->GetPolyData();
+      if (d->polydata)
+      {
+        int64_t renderingTime = Connector::getTime();
+        d->vertexFilter->SetInputData(d->polydata);
+        d->vertexFilter->Update();
+        d->polydata->ShallowCopy(d->vertexFilter->GetOutput());
+        d->mapper->SetInputData(d->polydata);
+        d->PolyDataRenderer->GetRenderWindow()->Render();
+        d->graphicsView->update();
+        std::cerr<<"Rendering Time: "<<(Connector::getTime()-renderingTime)/1e6 << std::endl;
+      }
       //-------------------
       // Convert the image in p_PixmapConversionBuffer to a QPixmap
       

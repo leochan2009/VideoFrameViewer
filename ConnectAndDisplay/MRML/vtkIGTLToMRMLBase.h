@@ -27,6 +27,7 @@
 
 // VTK includes
 #include <vtkObject.h>
+#include <vtkPolyData.h>
 
 // STD includes
 #include <vector>
@@ -88,7 +89,7 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLBase : public
   // Description:
   // Functions to convert OpenIGTLink message to MRML node.
   // If mrmlNode is QueryNode, the function will generate query node. (event is not used.)
-  virtual int          IGTLToMRML(igtl::MessageBase::Pointer buffer,
+  virtual vtkSmartPointer<vtkPolyData>   IGTLToMRML(igtl::MessageBase::Pointer buffer,
                                   vtkMRMLNode* node);
   // Description:
   // Functions to convert OpenIGTLink message to uint8_t stream data for further procession.

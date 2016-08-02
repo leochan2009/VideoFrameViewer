@@ -46,7 +46,7 @@ vtkSlicerPolyDataPLYTransmissionLogic::vtkSlicerPolyDataPLYTransmissionLogic()
   this->RestrictDeviceName = 0;
   
   this->MessageConverterList.clear();
-  this->polyData = vtkSmartPointer<vtkPolyData>::New();
+  this->PolyData = vtkSmartPointer<vtkPolyData>::New();
   // register default data types
   this->PolyConverter = vtkIGTLToMRMLPolyData::New();
   
@@ -238,9 +238,9 @@ void vtkSlicerPolyDataPLYTransmissionLogic::CallConnectorTimerHander()
     connector->ImportDataFromCircularBuffer();
     connector->ImportEventsFromEventBuffer();
     connector->PushOutgoingMessages();
+    PolyData = connector->PolyData;
   }
 }
-
 
 //---------------------------------------------------------------------------
 int vtkSlicerPolyDataPLYTransmissionLogic::SetRestrictDeviceName(int f)
@@ -320,6 +320,7 @@ int vtkSlicerPolyDataPLYTransmissionLogic::RegisterMessageConverter(vtkIGTLToMRM
   
   return 1;
 }
+
 
 //---------------------------------------------------------------------------
 int vtkSlicerPolyDataPLYTransmissionLogic::UnregisterMessageConverter(vtkIGTLToMRMLBase* converter)

@@ -3,7 +3,7 @@ project(vtkSlicer${MODULE_NAME}ModuleMRML)
 set(KIT "${PROJECT_NAME}")
 
 set(${KIT}_EXPORT_DIRECTIVE "VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT")
-FIND_LIBRARY(OpenIGTLinkLib OpenIGTLink /Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/bin/Debug)
+FIND_LIBRARY(OpenIGTLinkLib OpenIGTLink /Users/longquanchen/Desktop/Github/Slicer-unixBuild/OpenIGTLink-build/bin/Debug)
 FIND_LIBRARY(OpenH264Lib openh264 /Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/Testing/OpenH264)
 set(H264Directory /Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/Testing/OpenH264)
 

@@ -114,7 +114,7 @@ vtkSlicerConnectAndDisplayLogic* vtkIGTLToMRMLBase::GetConnectAndDisplayLogic()
 }
 
 //---------------------------------------------------------------------------
-int vtkIGTLToMRMLBase::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node)
+vtkSmartPointer<vtkPolyData>  vtkIGTLToMRMLBase::IGTLToMRML(igtl::MessageBase::Pointer buffer, vtkMRMLNode* node)
 {
   if(buffer && node)
     {
