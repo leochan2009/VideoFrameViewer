@@ -19,6 +19,7 @@
 #include "vtkIGTLToMRMLBase.h"
 #include "vtkSlicerConnectAndDisplayModuleMRMLExport.h"
 
+
 // OpenIGTLink includes
 #include <igtlVideoMessage.h>
 
@@ -29,6 +30,7 @@
 #include <vtkObject.h>
 
 class ISVCDecoder;
+class AVCodecContext;
 
 class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLDepthVideo : public vtkIGTLToMRMLBase
 {
@@ -62,6 +64,8 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLDepthVideo : 
   int IGTLToVTKScalarType(int igtlType);
   int SetupDecoder();
   void H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream);
+  void AVDecode(AVCodecContext *c, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream);
+  
   uint8_t *RGBFrame;
   uint8_t *DepthFrame;
   uint8_t *DepthIndex;
@@ -71,6 +75,10 @@ class VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT vtkIGTLToMRMLDepthVideo : 
   ISVCDecoder* decoderDepthFrame_;
   ISVCDecoder* decoderDepthIndex_;
   ISVCDecoder* decoderColor_;
+  
+  AVCodecContext* AVDecoderDepthIndex;
+  AVCodecContext* AVDecoderDepthFrame;
+  AVCodecContext* AVDecoderDepthColor;
   char*  IGTLName;
   //int interval;
   //bool _useCompress;

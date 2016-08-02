@@ -21,11 +21,20 @@
 #include "codec/api/svc/codec_app_def.h"
 #include "test/utils/BufferedData.h"
 #include "test/utils/FileInputStream.h"
-
+extern "C" {
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/opt.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/frame.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavcodec/avcodec.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/channel_layout.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/common.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/imgutils.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/mathematics.h"
+  #include "/Users/longquanchen/Downloads/libav-10.7/libavutil/samplefmt.h"
+}
+#define 	AV_INPUT_BUFFER_PADDING_SIZE   8
 // OpenIGTLink includes
 #include <igtl_util.h>
 #include <igtlVideoMessage.h>
-
 
 // Slicer includes
 //#include <vtkSlicerColorLogic.h>
@@ -89,6 +98,29 @@ namespace vtkIGTLToMRMLDepthVideoFunction{
 
 using namespace vtkIGTLToMRMLDepthVideoFunction;
 
+void vtkIGTLToMRMLDepthVideo::AVDecode(AVCodecContext *c, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream)
+{
+  AVFrame *frame;
+  frame = av_frame_alloc();
+  AVPacket avpkt;
+  av_init_packet(&avpkt);
+  uint8_t inbuf[iStreamSize + AV_INPUT_BUFFER_PADDING_SIZE];
+  memcpy(inbuf, kpH264BitStream, iStreamSize);
+  memset(inbuf + iStreamSize, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+  avpkt.size = iStreamSize;
+  avpkt.data = inbuf;
+  int got_frame;
+  int len = avcodec_decode_video2(c, frame, &got_frame, &avpkt);
+  if (len)
+  {
+    memcpy(outputByteStream, frame->data[0], iWidth*iHeight*3/2);
+  }
+  /* Some codecs, such as MPEG, transmit the I- and P-frame with a
+   latency of one frame. You must do the following to have a
+   chance to get the last frame of the video. */
+  av_frame_free(&frame);
+
+}
 
 void vtkIGTLToMRMLDepthVideo::H264Decode (ISVCDecoder* pDecoder, unsigned char* kpH264BitStream, int32_t& iWidth, int32_t& iHeight, int32_t& iStreamSize, uint8_t* outputByteStream) {
   
@@ -219,6 +251,17 @@ int vtkIGTLToMRMLDepthVideo::SetupDecoder()
   decoderDepthFrame_->Initialize (&decParam);
   WelsCreateDecoder (&decoderColor_);
   decoderColor_->Initialize (&decParam);
+  
+  //avcodec_register_all();
+  AVCodec *codec;
+  codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+  AVDecoderDepthIndex = avcodec_alloc_context3(codec);
+  avcodec_open2(AVDecoderDepthIndex, codec, NULL);
+  AVDecoderDepthFrame = avcodec_alloc_context3(codec);
+  avcodec_open2(AVDecoderDepthFrame, codec, NULL);
+  AVDecoderDepthColor = avcodec_alloc_context3(codec);
+  avcodec_open2(AVDecoderDepthColor, codec, NULL);
+  
   return 1;
 }
 
@@ -295,7 +338,7 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
       int32_t iWidth = videoMsg->GetWidth(), iHeight = videoMsg->GetHeight(), streamLength = videoMsg->GetPackBodySize()- IGTL_VIDEO_HEADER_SIZE;
       
       
-      int DemuxMethod = 3;
+      int DemuxMethod = 2;
       if (DemuxMethod == 1)
       {
         if (DepthIndex)
@@ -382,8 +425,9 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
           if (DepthFrame)
             delete [] DepthFrame;
           DepthFrame = NULL;
-          DepthFrame = new uint8_t[iHeight*iWidth];
-          H264Decode(this->decoderDepthIndex_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthFrame);
+          DepthFrame = new uint8_t[iHeight*iWidth*3/2];
+          AVDecode(this->AVDecoderDepthIndex, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthFrame);
+          //H264Decode(this->decoderDepthIndex_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthFrame);
           std::string outname = "DepthFrame.264";
           FILE* pf = fopen(outname.c_str(), "a");
           int temp;
@@ -398,8 +442,9 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
           if (DepthIndex)
             delete [] DepthIndex;
           DepthIndex = NULL;
-          DepthIndex = new uint8_t[iHeight*iWidth];
-          H264Decode(this->decoderDepthFrame_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthIndex);
+          DepthIndex = new uint8_t[iHeight*iWidth*3/2];
+          AVDecode(this->AVDecoderDepthFrame, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthIndex);
+          //H264Decode(this->decoderDepthFrame_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, DepthIndex);
           std::string outname = "DepthIndex.264";
           FILE* pf = fopen(outname.c_str(), "a");
           int temp;
@@ -432,10 +477,11 @@ uint8_t * vtkIGTLToMRMLDepthVideo::IGTLToMRML(igtl::MessageBase::Pointer buffer 
       RGBFrame = NULL;
       uint8_t* YUV420Frame = new uint8_t[iHeight*iWidth*3/2];
       RGBFrame = new uint8_t[iHeight*iWidth*3];
-      bool UseCompressForRGB = true;
+      bool UseCompressForRGB = false;
       if (UseCompressForRGB)
       {
-        H264Decode(this->decoderColor_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+        AVDecode(this->AVDecoderDepthColor, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
+        //H264Decode(this->decoderColor_, videoMsg->GetPackFragmentPointer(2), iWidth, iHeight, streamLength, YUV420Frame);
         std::string outname = "ColorFrame.264";
         FILE* pf = fopen(outname.c_str(), "a");
         int temp;

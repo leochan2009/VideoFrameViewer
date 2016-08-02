@@ -5,6 +5,9 @@ set(KIT "${PROJECT_NAME}")
 set(${KIT}_EXPORT_DIRECTIVE "VTK_SLICER_CONNECTANDDISPLAY_MODULE_MRML_EXPORT")
 FIND_LIBRARY(OpenIGTLinkLib OpenIGTLink /Users/longquanchen/Desktop/Github/Slicer-unixBuild/OpenIGTLink-build/bin/Debug)
 FIND_LIBRARY(OpenH264Lib openh264 /Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/Testing/OpenH264)
+FIND_LIBRARY(lib openh264 /Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/Testing/OpenH264)
+FIND_LIBRARY(AVCODEC avcodec /Users/longquanchen/Downloads/libav-10.7/libavcodec)
+FIND_LIBRARY(AVUTIL avutil /Users/longquanchen/Downloads/libav-10.7/libavutil)
 set(H264Directory /Users/longquanchen/Desktop/Github/OpenIGTLink-xcodeBuild/Testing/OpenH264)
 
 set(${KIT}_INCLUDE_DIRECTORIES
@@ -13,6 +16,9 @@ set(${KIT}_INCLUDE_DIRECTORIES
   ${CMAKE_CURRENT_BINARY_DIR}/../Logic
   ${H264Directory}
   "/usr/local/include/libiomp"
+  "/Users/longquanchen/Downloads/libav-10.7/"
+#"/Users/longquanchen/Downloads/libav-10.7/libavcodec"
+#"/Users/longquanchen/Downloads/libav-10.7/libavutil"
   )
 
 set(${KIT}_SRCS
@@ -41,6 +47,8 @@ set(${KIT}_TARGET_LIBRARIES
   vtkSlicerAnnotationsModuleMRML
   vtkSlicerMarkupsModuleMRML
   iomp5
+  ${AVCODEC}
+  ${AVUTIL}
   )
 
 #-----------------------------------------------------------------------------
