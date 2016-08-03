@@ -4,7 +4,10 @@ set(MODULE_NAME PolyDataCompressedTransmission)
 set(MODULE_TITLE ${MODULE_NAME})
 
 string(TOUPPER ${MODULE_NAME} MODULE_NAME_UPPER)
-
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 add_subdirectory(Logic)
 #-----------------------------------------------------------------------------
 set(MODULE_EXPORT_DIRECTIVE "Q_SLICER_QTMODULES_${MODULE_NAME_UPPER}_EXPORT")
@@ -24,6 +27,7 @@ set(MODULE_SRCS
   qSlicer${MODULE_NAME}Module.h
   qSlicer${MODULE_NAME}ModuleWidget.cxx
   qSlicer${MODULE_NAME}ModuleWidget.h
+  #Tracking.cpp
   )
 
 set(MODULE_MOC_SRCS
@@ -39,6 +43,7 @@ LINK_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/../ConnectAndDisplay/MRML)
 set(MODULE_TARGET_LIBRARIES
   vtkSlicerConnectAndDisplayModuleMRML
   vtkSlicer${MODULE_NAME}ModuleLogic
+  ${PCL_LIBRARIES}
   )
 
 set(MODULE_RESOURCES

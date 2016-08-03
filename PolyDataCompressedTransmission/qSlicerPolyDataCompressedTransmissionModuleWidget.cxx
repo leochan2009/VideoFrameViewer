@@ -53,6 +53,10 @@
 #include <vtkCellArray.h>
 #include <vtkSmartPointer.h>
 #include <vtkPolyDataMapper.h>
+
+//Tracking include
+#include "Tracking.cpp"
+
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
 class qSlicerPolyDataCompressedTransmissionModuleWidgetPrivate: public Ui_qSlicerPolyDataCompressedTransmissionModuleWidget
@@ -138,6 +142,7 @@ qSlicerPolyDataCompressedTransmissionModuleWidget::qSlicerPolyDataCompressedTran
     activeRenderWindow->GetInteractor()->Start();
     d->graphicsView->setFixedSize(d->picWidth, d->picHeight);
   }
+  trackingInitialization();
 }
 
 //-----------------------------------------------------------------------------
@@ -310,6 +315,7 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::importDataAndEvents()
       {
         memcpy(d->RGBFrame, igtlLogic->GetFrame(), d->picWidth*d->picHeight*3);
         int64_t renderingTime = Connector::getTime();
+        TrackObject(d->polydata);
         d->mapper->SetInputData(d->polydata);
         d->PolyDataRenderer->GetRenderWindow()->Render();
         d->graphicsView->setRGBFrame(d->RGBFrame);
