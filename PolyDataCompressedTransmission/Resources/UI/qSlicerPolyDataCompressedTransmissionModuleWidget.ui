@@ -183,6 +183,60 @@
          </item>
         </layout>
        </item>
+       <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_11">
+          <item>
+            <widget class="QLabel" name="NodeSelectorLabel">
+            <property name="text">
+            <string>TargetModelInputs</string>
+            </property>
+            </widget>
+          </item>
+          <item>
+            <widget class="qMRMLNodeComboBox" name="NodeSelector" native="true">
+              <property name="noneEnabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+                <property name="minimumSize">
+                <size>
+                <width>80</width>
+                <height>10</height>
+                </size>
+              </property>
+              <property name="nodeTypes" stdset="0">
+                <stringlist>
+                  <string>vtkMRMLModelNode</string>
+                </stringlist>
+              </property>
+              <property name="addAttribute" stdset="0">
+                <stringlist>
+                  <string>vtkMRMLModelNode</string>
+                  <string>vtkMRMLDisplayableNode</string>
+                  <string>vtkMRMLStorableNode</string>
+                </stringlist>
+              </property>
+              <property name="addEnabled" stdset="0">
+                <bool>false</bool>
+              </property>
+              <property name="removeEnabled" stdset="0">
+                <bool>false</bool>
+              </property>
+              <property name="showChildNodeTypes" stdset="0">
+                <bool>false</bool>
+              </property>
+              <property name="selectNodeUponCreation" stdset="0">
+                <bool>true</bool>
+              </property>
+            </widget>
+          </item>
+         </layout>
+       </item>
       </layout>
      </widget>
      <widget class="SlicerVideoWidget" name="graphicsView">
@@ -200,6 +254,11 @@
   </layout>
  </widget>
 <customwidgets>
+  <customwidget>
+    <class>qMRMLNodeComboBox</class>
+    <extends>QWidget</extends>
+    <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
   <customwidget>
   <class>SlicerVideoWidget</class>
   <extends>QWidget</extends>

@@ -304,7 +304,6 @@ void qSlicerConnectAndDisplayModuleWidget::updateIGTLConnectorNode()
   }
 }
 
-
 void qSlicerConnectAndDisplayModuleWidget::importDataAndEvents()
 {
   Q_D(qSlicerConnectAndDisplayModuleWidget);

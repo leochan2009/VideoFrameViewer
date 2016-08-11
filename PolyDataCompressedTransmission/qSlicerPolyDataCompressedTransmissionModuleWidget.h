@@ -62,6 +62,8 @@ public:
   /// Set the MRML node of interest
   void setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode * connectorNode);
   
+  void updateTargetModel(vtkObject* sceneObject, vtkObject* nodeObject);
+  
   void setMRMLScene(vtkMRMLScene* scene);
   
   /// Utility function that calls setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode*)

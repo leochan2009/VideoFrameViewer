@@ -44,6 +44,7 @@
 #include "vtkIGTLToMRMLVideo.h"
 #include "vtkMRMLIGTLQueryNode.h"
 #include <qMRMLNodeFactory.h>
+#include <vtkMRMLModelNode.h>
 
 //VTK include
 #include <vtkNew.h>
@@ -124,7 +125,8 @@ qSlicerPolyDataCompressedTransmissionModuleWidget::qSlicerPolyDataCompressedTran
                    this, SLOT(startCurrentIGTLConnector(bool)));
   QObject::connect(d->StartVideoCheckBox, SIGNAL(toggled(bool)),
                    this, SLOT(startVideoTransmission(bool)));
-  
+  //QObject::connect(this, SIGNAL(mrmlSceneChanged(vtkMRMLScene*)), this, SLOT(updateTargetModel()));
+
   qSlicerApplication *  app = qSlicerApplication::application();
   vtkRenderer* activeRenderer = app->layoutManager()->activeThreeDRenderer();
   d->PolyDataRenderer = activeRenderer;
@@ -166,6 +168,7 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLScene(vtkMRMLScen
     d->converter = vtkIGTLToMRMLDepthVideo::New();
     d->converter->SetIGTLName("ColoredDepth");
     d->IGTLConnectorNode->RegisterMessageConverter(d->converter);
+    qvtkReconnect( this->mrmlScene(), scene, vtkMRMLScene::NodeAddedEvent, this, SLOT( updateTargetModel(vtkObject*,vtkObject*) ) );
     if (d->IGTLConnectorNode)
     {
       // If the timer is not active
@@ -176,6 +179,29 @@ void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLScene(vtkMRMLScen
     }
   }
 }
+
+
+void qSlicerPolyDataCompressedTransmissionModuleWidget::updateTargetModel(vtkObject* sceneObject, vtkObject* nodeObject)
+{
+  Q_D(qSlicerPolyDataCompressedTransmissionModuleWidget);
+  vtkMRMLScene* scene = vtkMRMLScene::SafeDownCast(sceneObject);
+  if (!scene)
+  {
+    return;
+  }
+  
+  // Connect segment added and removed events to plugin to update subject hierarchy accordingly
+  vtkMRMLModelNode* node = vtkMRMLModelNode::SafeDownCast(nodeObject);
+  if (node)
+  {
+    //vtkMRMLModelNode::SafeDownCast(this->mrmlScene()->GetNodeIDByClass(0, "vtkMRMLModelNode"));
+    std::string temp = node->GetID();
+    d->NodeSelector->setCurrentNodeID(node->GetID());
+    //node->Delete();
+  }
+}
+
+
 
 //------------------------------------------------------------------------------
 void qSlicerPolyDataCompressedTransmissionModuleWidget::setMRMLIGTLConnectorNode(vtkMRMLIGTLConnectorNode * connectorNode)
